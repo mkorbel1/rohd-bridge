@@ -101,9 +101,30 @@ void main() {
       });
     });
 
-    test('parent through mid to leaf connection', () async {});
+    test('parent through mid to leaf connection', () async {
+      await testConnection(matchDirection: true, (parent, child) {
+        final mid = BridgeModule('mid');
+        parent.addSubModule(mid..addSubModule(child));
+        connectPorts(child.port(portName2), parent.port(portName1));
+        return parent;
+      });
+    });
 
-    test('feed-through fails with error unsupported', () async {});
+    test('feed-through fails with error unsupported', () async {
+      try {
+        await testConnection(matchDirection: true, (leaf1, leaf2) {
+          final top = BridgeModule('top')
+            ..addSubModule(leaf1)
+            ..addSubModule(leaf2);
+          connectPorts(leaf2.port(portName2), leaf1.port(portName1));
+          return top;
+        });
+        fail('Should have thrown an exception');
+      } on RohdBridgeException catch (e) {
+        expect(e.message, contains('Unhandled direction'));
+        return;
+      }
+    });
   });
 
   test(
