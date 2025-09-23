@@ -75,10 +75,10 @@ void main() {
     const putValConsumer = 0xcd;
 
     /// If [matchDirection], expects that mod1 is above mod2.
-    void testConnection(
-        void Function(BridgeModule mod1, BridgeModule mod2)
+    Future<void> testConnection(
+        BridgeModule Function(BridgeModule mod1, BridgeModule mod2)
             makeConnectionsAndHier,
-        {bool matchDirection = false}) {
+        {bool matchDirection = false}) async {
       final mod1 = BridgeModule('mod1')
         ..addInterface(MyIntf(),
             name: intfName1,
@@ -86,39 +86,46 @@ void main() {
       final mod2 = BridgeModule('mod2')
         ..addInterface(MyIntf(), name: intfName2, role: PairRole.consumer);
 
-      makeConnectionsAndHier(mod1, mod2);
+      final top = makeConnectionsAndHier(mod1, mod2);
 
-      // NOTE: we did not attach leaf1 and leaf2 to top ports, so they will not
-      // exist as submodules of top, but connection should still be made
+      if (mod1 != top) {
+        top.pullUpPort(mod1.createPort('dummy', PortDirection.inOut));
+      }
+      if (mod2 != top) {
+        top.pullUpPort(mod2.createPort('dummy', PortDirection.inOut));
+      }
+
+      await top.build();
 
       // check connection by putting a value on the wire at the source and
       // reading at destination
       mod1.interface(intfName1).port('myProviderPort').port.put(putValProvider);
       mod2.interface(intfName2).port('myConsumerPort').port.put(putValConsumer);
 
-      // expect(
-      //     mod1.interface(intfName1).port('myConsumerPort').port.value.toInt(),
-      //     putValConsumer);
-      // expect(
-      //     mod2.interface(intfName2).port('myProviderPort').port.value.toInt(),
-      //     putValProvider);
+      expect(
+          mod1.interface(intfName1).port('myConsumerPort').port.value.toInt(),
+          putValConsumer);
+      expect(
+          mod2.interface(intfName2).port('myProviderPort').port.value.toInt(),
+          putValProvider);
     }
 
-    test('in same level', () {
-      testConnection((leaf1, leaf2) {
-        BridgeModule('top')
+    test('in same level', () async {
+      await testConnection((leaf1, leaf2) {
+        final top = BridgeModule('top')
           ..addSubModule(leaf1)
           ..addSubModule(leaf2);
         connectInterfaces(
             leaf1.interface(intfName1), leaf2.interface(intfName2));
+        return top;
       });
     });
 
-    test('through multiple levels', () {
-      testConnection((leaf1, leaf2) {
+    test('through multiple levels', () async {
+      await testConnection((leaf1, leaf2) {
         final mid1 = BridgeModule('mid1');
         final mid2 = BridgeModule('mid2');
-        BridgeModule('top')
+        final top = BridgeModule('top')
           ..addSubModule(mid1..addSubModule(leaf1))
           ..addSubModule(mid2..addSubModule(leaf2));
         connectInterfaces(
@@ -129,41 +136,63 @@ void main() {
         expect(mid1.outputs.length, 1);
         expect(mid2.inputs.length, 1);
         expect(mid2.outputs.length, 1);
+
+        return top;
       });
     });
 
-    test('misaligned direction direct parent leaf connection fails', () {
+    test('misaligned direction direct parent leaf connection fails', () async {
       try {
-        testConnection((parent, child) {
+        await testConnection((parent, child) {
           parent.addSubModule(child);
           connectInterfaces(
               parent.interface(intfName1), child.interface(intfName2));
+          return parent;
         });
         fail('Should have thrown an exception');
       } on RohdBridgeException catch (e) {
         expect(e.message, contains('Vertical connections'));
-        return;
       }
     });
 
     test('direct parent leaf connection', () async {
-      testConnection(matchDirection: true, (parent, child) {
+      await testConnection(matchDirection: true, (parent, child) {
         parent.addSubModule(child);
         connectInterfaces(
             parent.interface(intfName1), child.interface(intfName2));
+        return parent;
       });
     });
 
-    test('parent through mid to leaf connection', () {
-      testConnection(matchDirection: true, (parent, child) {
-        parent.addSubModule(BridgeModule('mid')..addSubModule(child));
+    test('parent through mid to leaf connection', () async {
+      await testConnection(matchDirection: true, (parent, child) {
+        final mid = BridgeModule('mid');
+        parent.addSubModule(mid..addSubModule(child));
         connectInterfaces(
             parent.interface(intfName1), child.interface(intfName2));
+
+        expect(mid.inputs.length, 1);
+        expect(mid.outputs.length, 1);
+
+        return parent;
       });
     });
 
-    test('feed-through fails with error unsupported', () {
-      //TODO
+    test('feed-through fails with error unsupported', () async {
+      try {
+        await testConnection(matchDirection: true, (leaf1, leaf2) {
+          final top = BridgeModule('top')
+            ..addSubModule(leaf1)
+            ..addSubModule(leaf2);
+          connectInterfaces(
+              leaf1.interface(intfName1), leaf2.interface(intfName2));
+          return top;
+        });
+        fail('Should have thrown an exception');
+      } on RohdBridgeException catch (e) {
+        expect(e.message, contains('Unhandled direction'));
+        return;
+      }
     });
   });
 

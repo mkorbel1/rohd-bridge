@@ -21,13 +21,13 @@ void main() {
     const putVal = 0xab;
 
     /// Expects mod2 drives mod1.
-    void testConnection(
-        void Function(
+    Future<void> testConnection(
+        BridgeModule Function(
           BridgeModule mod1,
           BridgeModule mod2,
         ) makeConnectionsAndHier,
         {dynamic matcher = 0xab,
-        bool matchDirection = false}) {
+        bool matchDirection = false}) async {
       final mod1 = BridgeModule('mod1')
         ..createPort(portName1,
             matchDirection ? PortDirection.output : PortDirection.input,
@@ -35,31 +35,39 @@ void main() {
       final mod2 = BridgeModule('mod2')
         ..createPort(portName2, PortDirection.output, width: 8);
 
-      makeConnectionsAndHier(mod1, mod2);
+      final top = makeConnectionsAndHier(mod1, mod2);
 
-      // NOTE: we did not attach leaf1 and leaf2 to top ports, so they will not
-      // exist as submodules of top, but connection should still be made
+      if (mod1 != top) {
+        top.pullUpPort(mod1.createPort('dummy', PortDirection.inOut));
+      }
+      if (mod2 != top) {
+        top.pullUpPort(mod2.createPort('dummy', PortDirection.inOut));
+      }
+
+      await top.build();
 
       // check connection by putting a value on the wire at the source and
       // reading at destination
       mod2.output(portName2).put(putVal);
-      expect(mod1.input(portName1).value.toInt(), matcher);
+      expect((mod1.tryInput(portName1) ?? mod1.output(portName1)).value.toInt(),
+          matcher);
     }
 
-    test('in same level', () {
-      testConnection((leaf1, leaf2) {
-        BridgeModule('top')
+    test('in same level', () async {
+      await testConnection((leaf1, leaf2) {
+        final top = BridgeModule('top')
           ..addSubModule(leaf1)
           ..addSubModule(leaf2);
         connectPorts(leaf2.port(portName2), leaf1.port(portName1));
+        return top;
       });
     });
 
-    test('through multiple levels', () {
-      testConnection((leaf1, leaf2) {
+    test('through multiple levels', () async {
+      await testConnection((leaf1, leaf2) {
         final mid1 = BridgeModule('mid1');
         final mid2 = BridgeModule('mid2');
-        BridgeModule('top')
+        final top = BridgeModule('top')
           ..addSubModule(mid1..addSubModule(leaf1))
           ..addSubModule(mid2..addSubModule(leaf2));
         connectPorts(leaf2.port(portName2), leaf1.port(portName1));
@@ -67,12 +75,35 @@ void main() {
         // ensure ports actually got punched through mid levels
         expect(mid1.inputs.keys.first, contains(portName1));
         expect(mid2.outputs.keys.first, contains(portName2));
+
+        return top;
       });
     });
 
-    test('direct parent leaf connection', () {});
+    test('misaligned direction direct parent leaf connection fails', () async {
+      try {
+        await testConnection((parent, child) {
+          parent.addSubModule(child);
+          connectPorts(child.port(portName2), parent.port(portName1));
+          return parent;
+        });
+        fail('Should have thrown an exception');
+      } on RohdBridgeException catch (e) {
+        expect(e.message, contains('Vertical connections'));
+      }
+    });
 
-    test('parent through mid to leaf connection', () {});
+    test('direct parent leaf connection', () async {
+      await testConnection(matchDirection: true, (parent, child) {
+        parent.addSubModule(child);
+        connectPorts(child.port(portName2), parent.port(portName1));
+        return parent;
+      });
+    });
+
+    test('parent through mid to leaf connection', () async {});
+
+    test('feed-through fails with error unsupported', () async {});
   });
 
   test(
