@@ -566,7 +566,9 @@ class BridgeModule extends Module with SystemVerilog {
         .keys
         .toList(growable: false);
 
-    for (var i = path.length - 2; i >= 0; i--) {
+    for (var i = path.length - 2;
+        i > 0 || (i >= 0 && topToConnect == null);
+        i--) {
       // uniquify again along the path, in case of another conflict
       newIntf = newIntf.punchUpTo(
         path[i] as BridgeModule,
@@ -1288,6 +1290,14 @@ void connectInterfaces(
     // up and down case
     final commonParent = findCommonParent(intf1Instance, intf2Instance);
 
+    if (commonParent == intf1Instance || commonParent == intf2Instance) {
+      throw RohdBridgeException(
+          'Vertical connections should have the same role, but the common'
+          ' parent of $intf1Instance and $intf2Instance is $commonParent,'
+          ' but with mismatched roles ${intf1.role} and ${intf2.role},'
+          ' respectively.');
+    }
+
     if (commonParent == null) {
       throw RohdBridgeException('No common parent found between'
           ' $intf1Instance and $intf2Instance');
@@ -1338,7 +1348,8 @@ void connectInterfaces(
     final intf2ContainsIntf1 = intf2ToIntf1Path != null;
 
     if (intf1ContainsIntf2) {
-      (intf2ToIntf1Path![1] as BridgeModule)._pullUpInterfaceAndConnect(
+      // (intf1ToIntf2Path![1] as BridgeModule)
+      intf1.module._pullUpInterfaceAndConnect(
         intf2,
         newIntfName: intf2PathNewName,
         allowIntfUniquification: allowIntf2PathUniquification,
@@ -1346,7 +1357,7 @@ void connectInterfaces(
         exceptPorts: exceptPorts,
       );
     } else if (intf2ContainsIntf1) {
-      (intf1ToIntf2Path![1] as BridgeModule)._pullUpInterfaceAndConnect(
+      (intf2ToIntf1Path![1] as BridgeModule)._pullUpInterfaceAndConnect(
         intf1,
         newIntfName: intf1PathNewName,
         allowIntfUniquification: allowIntf1PathUniquification,

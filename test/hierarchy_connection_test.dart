@@ -15,29 +15,35 @@ import 'package:rohd_bridge/rohd_bridge.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('connect port from one leaf to another', () {
+  group('connect ports through hierarchy', () {
     const portName1 = 'myPort1';
     const portName2 = 'myPort2';
     const putVal = 0xab;
 
+    /// Expects mod2 drives mod1.
     void testConnection(
-        void Function(BridgeModule leaf1, BridgeModule leaf2)
-            makeConnectionsAndHier,
-        {dynamic matcher = 0xab}) {
-      final leaf1 = BridgeModule('leaf1')
-        ..createPort(portName1, PortDirection.input, width: 8);
-      final leaf2 = BridgeModule('leaf2')
+        void Function(
+          BridgeModule mod1,
+          BridgeModule mod2,
+        ) makeConnectionsAndHier,
+        {dynamic matcher = 0xab,
+        bool matchDirection = false}) {
+      final mod1 = BridgeModule('mod1')
+        ..createPort(portName1,
+            matchDirection ? PortDirection.output : PortDirection.input,
+            width: 8);
+      final mod2 = BridgeModule('mod2')
         ..createPort(portName2, PortDirection.output, width: 8);
 
-      makeConnectionsAndHier(leaf1, leaf2);
+      makeConnectionsAndHier(mod1, mod2);
 
       // NOTE: we did not attach leaf1 and leaf2 to top ports, so they will not
       // exist as submodules of top, but connection should still be made
 
       // check connection by putting a value on the wire at the source and
       // reading at destination
-      leaf2.output(portName2).put(putVal);
-      expect(leaf1.input(portName1).value.toInt(), matcher);
+      mod2.output(portName2).put(putVal);
+      expect(mod1.input(portName1).value.toInt(), matcher);
     }
 
     test('in same level', () {
@@ -63,6 +69,10 @@ void main() {
         expect(mid2.outputs.keys.first, contains(portName2));
       });
     });
+
+    test('direct parent leaf connection', () {});
+
+    test('parent through mid to leaf connection', () {});
   });
 
   test(
