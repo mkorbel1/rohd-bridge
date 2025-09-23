@@ -164,6 +164,15 @@ void main() {
       });
     });
 
+    test('direct parent leaf connection, backwards connection', () async {
+      await testConnection(matchDirection: true, (parent, child) {
+        parent.addSubModule(child);
+        connectInterfaces(
+            child.interface(intfName2), parent.interface(intfName1));
+        return parent;
+      });
+    });
+
     test('parent through mid to leaf connection', () async {
       await testConnection(matchDirection: true, (parent, child) {
         final mid = BridgeModule('mid');

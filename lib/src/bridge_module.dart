@@ -1356,7 +1356,6 @@ void connectInterfaces(
     final intf2ContainsIntf1 = intf2ToIntf1Path != null;
 
     if (intf1ContainsIntf2) {
-      // (intf1ToIntf2Path![1] as BridgeModule)
       intf1.module._pullUpInterfaceAndConnect(
         intf2,
         newIntfName: intf2PathNewName,
@@ -1365,7 +1364,7 @@ void connectInterfaces(
         exceptPorts: exceptPorts,
       );
     } else if (intf2ContainsIntf1) {
-      (intf2ToIntf1Path![1] as BridgeModule)._pullUpInterfaceAndConnect(
+      intf2.module._pullUpInterfaceAndConnect(
         intf1,
         newIntfName: intf1PathNewName,
         allowIntfUniquification: allowIntf1PathUniquification,
