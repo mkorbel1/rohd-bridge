@@ -27,34 +27,39 @@ extension BridgeModuleFromJson on BridgeModule {
           'module name $definitionName');
     }
 
-    // process parameters
-    final paramMap = jsonContents['moduleParameters'] as Map<String, dynamic>;
+    final paramMap =
+        jsonContents['moduleParameters'] as Map<String, dynamic>? ?? {};
     final parameters = addParametersFromJson(paramMap);
 
-    // process ports
     if (jsonContents.containsKey('portList')) {
-      final ports = jsonContents['portList'] as List<dynamic>;
-      addPortsFromJson(_getPortInfo(ports), parameters);
+      addPortsFromJson(jsonContents['portList'] as List<dynamic>, parameters);
     }
-    if (jsonContents['complexPortMemberToRange'] is Map) {
-      _getStructMap(
-              jsonContents['complexPortMemberToRange'] as Map<String, dynamic>)
-          .forEach((key, value) {
-        addStructMap(key, port(value));
-      });
+
+    if (jsonContents['complexPortMemberToRange'] is Map<String, dynamic>) {
+      addStructMapsFromJson(
+          jsonContents['complexPortMemberToRange'] as Map<String, dynamic>);
     }
+
     if (jsonContents['busInterfaces'] != null) {
-      // parse and map bus interfaces to thisMod
       addInterfacesFromJson(jsonContents['name'] as String,
           jsonContents['busInterfaces'] as Map<String, dynamic>, parameters);
     }
   }
 
-  /// Create ports in the module based on the portInfo and parameters
+  /// Calls [addStructMap] for each entry in the [structInfo] map.
+  void addStructMapsFromJson(Map<String, dynamic> structInfo) {
+    final structInfoAdjusted = _getStructMap(structInfo);
+    for (final entry in structInfoAdjusted.entries) {
+      addStructMap(entry.key, port(entry.value));
+    }
+  }
+
+  /// Create ports in the module based on the [portInfo] and [parameters].
   void addPortsFromJson(
-      List<Map<String, String>> portInfo, Map<String, String> parameters) {
+      List<dynamic> portInfo, Map<String, String> parameters) {
+    final portInfoAdjusted = _getPortInfo(portInfo);
     // Create all necessary ports in the module
-    for (final portDetails in portInfo) {
+    for (final portDetails in portInfoAdjusted) {
       final portName = portDetails['name']!;
       final direction = PortDirection.fromString(portDetails['direction']!);
       final packedRanges = portDetails['packedRanges']?.toString() ?? '';
@@ -84,9 +89,9 @@ extension BridgeModuleFromJson on BridgeModule {
     }
   }
 
-  /// Returns a json to pass to [BridgeInterface.ofJson]. This json is used to
-  /// create a [BridgeInterface] object.
-  Map<String, dynamic> _getBridgeIntfJson(
+  /// Returns a [BridgeInterface] based on the json [intfMap].
+  @internal
+  BridgeInterface getBridgeIntfFromJson(
       {required Map<String, dynamic> intfMap}) {
     final vendor = intfMap['vendor'] as String;
     final library = intfMap['library'] as String;
@@ -104,34 +109,35 @@ extension BridgeModuleFromJson on BridgeModule {
       final portMapJson = portMap as Map<String, dynamic>;
       final logicalPortName = portMapJson['logicalPortName']! as String;
       final physicalPortName = portMapJson['physicalPortName']! as String;
-      var logicalPortWidth = portMapJson['logicalPortWidth']! as String;
-      logicalPortWidth = logicalPortWidth == '<not constrained>'
-          ? portMapJson['physicalPortWidth']! as String
-          : logicalPortWidth;
+
+      // use physical port width if we can't tell from logical port width
+      final logicalPortWidth =
+          int.tryParse(portMapJson['logicalPortWidth']! as String) ??
+              int.parse(portMapJson['physicalPortWidth']! as String);
+
       final dir = _getPairDirection(physicalPortName, mode);
 
       switch (dir) {
         case PairDirection.fromConsumer:
-          portsOnConsumer[logicalPortName] = int.parse(logicalPortWidth);
+          portsOnConsumer[logicalPortName] = logicalPortWidth;
 
         case PairDirection.fromProvider:
-          portsOnProvider[logicalPortName] = int.parse(logicalPortWidth);
+          portsOnProvider[logicalPortName] = logicalPortWidth;
 
         case PairDirection.sharedInputs:
         case PairDirection.commonInOuts:
-          portsSharedInouts[logicalPortName] = int.parse(logicalPortWidth);
+          portsSharedInouts[logicalPortName] = logicalPortWidth;
       }
     }
 
-    return {
-      'vendor': vendor,
-      'library': library,
-      'name': name,
-      'version': version,
-      'portsOnConsumer': portsOnConsumer,
-      'portsOnProvider': portsOnProvider,
-      'portsSharedInouts': portsSharedInouts
-    };
+    return BridgeInterface(
+        name: name,
+        library: library,
+        vendor: vendor,
+        version: version,
+        portsFromConsumer: portsOnConsumer,
+        portsFromProvider: portsOnProvider,
+        portsSharedInouts: portsSharedInouts);
   }
 
   /// Returns the [PairDirection] based on the port name and the role.
@@ -156,7 +162,7 @@ extension BridgeModuleFromJson on BridgeModule {
   /// Check if 'complexPortMemberToRange' exists and is a Map before proceeding.
   static Map<String, String> _getStructMap(Map<String, dynamic> jsonMap) {
     final structMap = <String, String>{};
-    jsonMap.forEach((key, dynamic value) {
+    jsonMap.forEach((key, value) {
       if (value is Map) {
         value.cast<String, String>().forEach((structMember, unpackedSlice) {
           structMap[structMember] = unpackedSlice;
@@ -169,37 +175,23 @@ extension BridgeModuleFromJson on BridgeModule {
   }
 
   /// Creates interfaces based on a JSON input.
+  ///
+  /// The [parameters] argument is not currently used, but may be useful in the
+  /// future.
   void addInterfacesFromJson(String instanceName,
       Map<String, dynamic> busInterfaces, Map<String, String> parameters) {
-    busInterfaces.forEach((intfInstName, intfInfo) {
+    for (final MapEntry(key: intfInstName, value: intfInfo)
+        in busInterfaces.entries) {
       intfInfo as Map<String, dynamic>;
-
-      final busInstanceParamOverride = <String, int>{};
-      // If this interface instance is not going to be used,
-      // theres no need to spend time parsing the rest of the data
-
-      (intfInfo['configurableElementValues'] as Map<String, dynamic>)
-          .forEach((param, value) {
-        final newValue =
-            getInt(value.toString(), asIsIfUnparsed: true).toString();
-        // check if it's a string parameter and ignore override
-        // Assumption: String parameters are generally not used in
-        // module definitions
-        final val =
-            int.tryParse(newValue); // evaluateExpression(newValue, parameters);
-        if (val is int) {
-          busInstanceParamOverride[param] = val;
-        }
-      });
 
       final role = _getPairRole(intfInfo['mode'] as String);
 
       final portMapList = intfInfo['portMaps'] != null
-          ? intfInfo['portMaps'] as List<Map<String, dynamic>>
+          ? List<Map<String, dynamic>>.from(
+              intfInfo['portMaps']! as List<dynamic>)
           : <Map<String, dynamic>>[];
       final allUsedPorts = _getUsedPorts(portMapList);
-      final thisIntf =
-          BridgeInterface.ofJson(_getBridgeIntfJson(intfMap: intfInfo));
+      final thisIntf = getBridgeIntfFromJson(intfMap: intfInfo);
 
       _checkReqPortUsage(thisIntf, allUsedPorts);
 
@@ -209,11 +201,6 @@ extension BridgeModuleFromJson on BridgeModule {
         role: role,
         connect: false,
       );
-
-      final parameterNameValuesString = <String>[];
-      busInstanceParamOverride.forEach((key, value) {
-        parameterNameValuesString.add('$key : $value');
-      });
 
       for (final portMap in portMapList) {
         final rtlPortName = portMap['physicalPortName'].toString();
@@ -235,16 +222,16 @@ extension BridgeModuleFromJson on BridgeModule {
           addPortMap(port(phyPortRef), thisIntfRef.port(logPortRef));
         }
       }
-    });
+    }
   }
 
   /// Returns pairrole from string
-  static PairRole _getPairRole(String role) {
-    final ret = role == 'master'
+  static PairRole _getPairRole(String mode) {
+    final ret = mode == 'master'
         ? PairRole.provider
-        : role == 'slave'
+        : mode == 'slave'
             ? PairRole.consumer
-            : role == 'mirroredmaster'
+            : mode == 'mirroredmaster'
                 ? PairRole.consumer
                 : PairRole.provider;
     return ret;
