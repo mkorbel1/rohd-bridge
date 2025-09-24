@@ -180,13 +180,21 @@ sealed class PortReference extends Reference {
         final includesOneIntfPortRef =
             [this, other].whereType<InterfacePortReference>().length == 1;
 
+        //TODO: what if its 2?
+
         if (includesOneIntfPortRef) {
           final portDir =
               this is! InterfacePortReference ? direction : other.direction;
 
           switch (portDir) {
             case PortDirection.input || PortDirection.inOut:
-              throw UnimplementedError();
+              if (other is InterfacePortReference) {
+                // this is the external side connection
+                return (receiver: _externalPort, driver: other._externalPort);
+              } else {
+                // this is the internal side connection
+                return (receiver: _internalPort, driver: other._internalPort);
+              }
             case PortDirection.output:
               if (other is InterfacePortReference) {
                 // this is the internal side connection

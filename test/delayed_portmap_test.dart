@@ -150,13 +150,21 @@ void main() {
     final topIntf = top.addInterface(SimpleIntf2(),
         name: 'myIntf', role: PairRole.provider, connect: false);
 
+    expect(topIntf.internalInterface, isNull);
+
     // before connection
-    topIntf.addPortMap(topIntf.port('fp1'), top.port('tfp1'));
+    topIntf
+      ..addPortMap(topIntf.port('fp1'), top.port('tfp1'))
+      ..addPortMap(topIntf.port('fc1'), top.port('tfc1'))
+      ..addPortMap(topIntf.port('cio1'), top.port('tcio1'));
 
     leafIntf.connectUpTo(topIntf);
 
     // after connection
-    topIntf.addPortMap(topIntf.port('fp2'), top.port('tfp2'));
+    topIntf
+      ..addPortMap(topIntf.port('fp2'), top.port('tfp2'))
+      ..addPortMap(topIntf.port('fc2'), top.port('tfc2'))
+      ..addPortMap(topIntf.port('cio2'), top.port('tcio2'));
 
     await top.build();
 
@@ -165,6 +173,18 @@ void main() {
 
     leafIntf.internalInterface!.port('fp2').put(0x5b);
     expect(topIntf.interface.port('fp2').value.toInt(), 0x5b);
+
+    topIntf.interface.port('fc1').put(0x3);
+    expect(leafIntf.internalInterface!.port('fc1').value.toInt(), 0x3);
+
+    topIntf.interface.port('fc2').put(0x7e);
+    expect(leafIntf.internalInterface!.port('fc2').value.toInt(), 0x7e);
+
+    leafIntf.internalInterface!.port('cio1').put(0x1);
+    expect(topIntf.interface.port('cio1').value.toInt(), 0x1);
+
+    topIntf.interface.port('cio2').put(0x4);
+    expect(leafIntf.internalInterface!.port('cio2').value.toInt(), 0x4);
 
     print(top.generateSynth());
   });
