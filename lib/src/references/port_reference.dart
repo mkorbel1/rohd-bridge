@@ -174,7 +174,38 @@ sealed class PortReference extends Reference {
     switch (loc) {
       case _RelativePortLocation.sameModule:
         //TODO: does receiver make sense to always be external here??
-        return (driver: other._internalPort, receiver: _externalPort);
+        // throw Exception('same module');
+        //TODO maybe some special handling for intf case?
+
+        final includesOneIntfPortRef =
+            [this, other].whereType<InterfacePortReference>().length == 1;
+
+        if (includesOneIntfPortRef) {
+          final portDir =
+              this is! InterfacePortReference ? direction : other.direction;
+
+          switch (portDir) {
+            case PortDirection.input || PortDirection.inOut:
+              throw UnimplementedError();
+            case PortDirection.output:
+              if (other is InterfacePortReference) {
+                // this is the internal side connection
+                return (receiver: _internalPort, driver: other._internalPort);
+              } else {
+                // this is the external side connection
+                return (receiver: _externalPort, driver: other._externalPort);
+              }
+          }
+        }
+
+        // if (this is InterfacePortReference &&
+        //     other is! InterfacePortReference) {
+        //   return (driver: other._internalPort, receiver: _externalPort);
+        // } else if (this is! InterfacePortReference &&
+        //     other is InterfacePortReference) {
+        //   return (driver: other._externalPort, receiver: _internalPort);
+        // }
+        return (driver: other._externalPort, receiver: _externalPort);
       case _RelativePortLocation.sameLevel:
         return (driver: other._externalPort, receiver: _externalPort);
       case _RelativePortLocation.thisAboveOther:

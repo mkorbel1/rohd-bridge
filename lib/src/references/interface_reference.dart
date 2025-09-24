@@ -304,8 +304,6 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// - For consumer interfaces: inputs flow up, outputs flow down
   /// - Shared and common ports follow interface-specific rules
   ///
-  /// Both interfaces must have their port mappings activated before connection.
-  ///
   /// The [other] must be on this reference's [module]'s parent.
   void connectUpTo(InterfaceReference other) {
     // TODO(mkorbel1): remove restriction that it must be adjacent!
@@ -431,10 +429,6 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// Connects this interface to [other], where [other] represents the same
   /// interface in a child module. This sets up the proper signal flow based on
   /// the interface role, with signals flowing from parent to child.
-  ///
-  /// Both interfaces must have their port mappings activated before connection.
-  /// The child interface ([other]) must have an internal interface for the
-  /// connection to be established.
   ///
   /// The [other] must be on a sub-module of this [module].
   void connectDownTo(InterfaceReference other) {

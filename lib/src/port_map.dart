@@ -49,11 +49,12 @@ class PortMap {
           'Port and InterfacePort must be in the same module.');
     }
 
-    if (!preConnected &&
-        interfacePort.interfaceReference.internalInterface != null) {
-      throw RohdBridgeException('Cannot connect a port to an interface which'
-          ' already has an internal interface.');
-    }
+    // TODO: do we need this check still?
+    // if (!preConnected &&
+    //     interfacePort.interfaceReference.internalInterface != null) {
+    //   throw RohdBridgeException('Cannot connect a port to an interface which'
+    //       ' already has an internal interface.');
+    // }
 
     if (port is InterfacePortReference) {
       throw RohdBridgeException(

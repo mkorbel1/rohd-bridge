@@ -131,7 +131,45 @@ void main() {
     expect(pm.isConnected, isTrue);
   });
 
-  test('port mapped interface connected up to', () async {
+  test('port mapped interface connected up to simple', () async {
+    final top = BridgeModule('top')
+      ..createPort('tfp1', PortDirection.output, width: 4)
+      ..createPort('tfp2', PortDirection.output, width: 8)
+      ..createPort('tfc1', PortDirection.input, width: 4)
+      ..createPort('tfc2', PortDirection.input, width: 8)
+      ..createPort('tcio1', PortDirection.inOut, width: 4)
+      ..createPort('tcio2', PortDirection.inOut, width: 8);
+
+    final leaf = BridgeModule('leaf');
+    top
+      ..addSubModule(leaf)
+      ..pullUpPort(leaf.createPort('dummy', PortDirection.input));
+
+    final leafIntf = leaf.addInterface(SimpleIntf2(),
+        name: 'myIntf', role: PairRole.provider);
+    final topIntf = top.addInterface(SimpleIntf2(),
+        name: 'myIntf', role: PairRole.provider, connect: false);
+
+    // before connection
+    topIntf.addPortMap(topIntf.port('fp1'), top.port('tfp1'));
+
+    leafIntf.connectUpTo(topIntf);
+
+    // after connection
+    topIntf.addPortMap(topIntf.port('fp2'), top.port('tfp2'));
+
+    await top.build();
+
+    leafIntf.internalInterface!.port('fp1').put(0xa);
+    expect(topIntf.interface.port('fp1').value.toInt(), 0xa);
+
+    leafIntf.internalInterface!.port('fp2').put(0x5b);
+    expect(topIntf.interface.port('fp2').value.toInt(), 0x5b);
+
+    print(top.generateSynth());
+  });
+
+  test('port mapped interface connected up to with slices', () async {
     final top = BridgeModule('top')
       ..createPort('tfp1', PortDirection.output, width: 6)
       ..createPort('tfp2', PortDirection.output, width: 4)
