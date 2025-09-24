@@ -29,6 +29,23 @@ class SimpleIntf extends PairInterface {
   SimpleIntf clone() => SimpleIntf();
 }
 
+class SimpleIntf2 extends PairInterface {
+  SimpleIntf2()
+      : super(portsFromProvider: [
+          Logic.port('fp1', 4),
+          Logic.port('fp2', 8),
+        ], portsFromConsumer: [
+          Logic.port('fc1', 4),
+          Logic.port('fc2', 8),
+        ], commonInOutPorts: [
+          LogicNet.port('cio1', 4),
+          LogicNet.port('cio2', 8),
+        ]);
+
+  @override
+  SimpleIntf2 clone() => SimpleIntf2();
+}
+
 BridgeModule leaf(String name, PairRole role) {
   final thisLeaf = BridgeModule(name)
     ..createPort('in1', PortDirection.input)
@@ -113,4 +130,35 @@ void main() {
 
     expect(pm.isConnected, isTrue);
   });
+
+  test('port mapped interface connected up to', () async {
+    final top = BridgeModule('top')
+      ..createPort('tfp1', PortDirection.output, width: 6)
+      ..createPort('tfp2', PortDirection.output, width: 4)
+      ..createPort('tfc1', PortDirection.input, width: 6)
+      ..createPort('tfc2', PortDirection.input, width: 4)
+      ..createPort('tcio1', PortDirection.inOut, width: 6)
+      ..createPort('tcio2', PortDirection.inOut, width: 4);
+
+    final leaf = BridgeModule('leaf');
+    top
+      ..addSubModule(leaf)
+      ..pullUpPort(leaf.createPort('dummy', PortDirection.input));
+
+    final leafIntf = leaf.addInterface(SimpleIntf2(),
+        name: 'myIntf', role: PairRole.provider);
+    final topIntf = top.addInterface(SimpleIntf2(),
+        name: 'myIntf', role: PairRole.provider, connect: false);
+
+    topIntf.addPortMap(
+        topIntf.port('fp1').slice(2, 1), top.port('tfp1').slice(3, 2));
+
+    leafIntf.connectUpTo(topIntf);
+
+    await top.build();
+
+    print(top.generateSynth());
+  });
+
+  test('port mapped interface connected down to', () async {});
 }

@@ -82,7 +82,33 @@ class PortMap {
     }
     _isConnected = true;
 
+    // in case there has been an internal interface created
+    connectInternalIfPresent(); //TODO: should gets not take care of it?
+
     return true;
+  }
+
+  /// Connects to the `internalInterface`, if there is one present.
+  ///
+  /// This should only be called internally and only immediately after creating
+  /// an internal interface or when creating a new [PortMap] after an internal
+  /// interface has been created.
+  @internal
+  void connectInternalIfPresent() {
+    final internalIntfPort = interfacePort.interfaceReference.internalInterface
+        ?.port(interfacePort.portName);
+
+    if (internalIntfPort == null) {
+      return;
+    }
+
+    //TODO: will the gets magically work here?
+    switch (port.direction) {
+      case PortDirection.input || PortDirection.inOut:
+        interfacePort.gets(port);
+      case PortDirection.output:
+        port.gets(interfacePort);
+    }
   }
 
   @override

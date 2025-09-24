@@ -36,7 +36,12 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// If `null`, then there is no internal interface representation — the
   /// interface is mapped directly to individual module ports or connected
   /// indirectly through other interfaces.
-  late final InterfaceType? internalInterface;
+  ///
+  /// If an interface is connected vertically (e.g. child up to parent) to an
+  /// interface that originally did not have an [internalInterface], one will
+  /// be created and connected for any [portMaps].
+  InterfaceType? get internalInterface => _internalInterface;
+  InterfaceType? _internalInterface;
 
   /// The role that this interface plays in interface connections.
   ///
@@ -87,7 +92,7 @@ class InterfaceReference<InterfaceType extends PairInterface>
       {required bool connect,
       required String Function(String logical)? portUniquify}) {
     if (connect) {
-      internalInterface =
+      _internalInterface =
           module.addPairInterfacePorts(interface, role, uniquify: portUniquify);
 
       for (final portName in internalInterface!.ports.keys) {
@@ -101,7 +106,25 @@ class InterfaceReference<InterfaceType extends PairInterface>
         );
       }
     } else {
-      internalInterface = null;
+      _internalInterface = null;
+    }
+  }
+
+  /// Creates an [internalInterface] on this [InterfaceReference], connecting
+  /// ports to existing [portMaps] when they exist, and creating new ports
+  /// otherwise.
+  ///
+  /// This should only be called when [internalInterface] is `null`.
+  void _introduceInternalInterface() {
+    assert(
+        internalInterface == null,
+        'Should only be called when no internal interface'
+        ' was created originally.');
+
+    _internalInterface = interface.clone() as InterfaceType;
+
+    for (final portMap in portMaps) {
+      portMap.connectInternalIfPresent();
     }
   }
 
@@ -286,6 +309,10 @@ class InterfaceReference<InterfaceType extends PairInterface>
     _connectAllPortMaps(exceptPorts: null);
     other._connectAllPortMaps(exceptPorts: null);
 
+    if (other.internalInterface == null) {
+      other._introduceInternalInterface();
+    }
+
     switch (role) {
       case (PairRole.provider):
         other.internalInterface!
@@ -407,6 +434,10 @@ class InterfaceReference<InterfaceType extends PairInterface>
   void connectDownTo(InterfaceReference other) {
     _connectAllPortMaps(exceptPorts: null);
     other._connectAllPortMaps(exceptPorts: null);
+
+    if (internalInterface == null) {
+      _introduceInternalInterface();
+    }
 
     switch (role) {
       case (PairRole.provider):

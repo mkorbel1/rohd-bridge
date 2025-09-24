@@ -110,4 +110,7 @@ mixin InterfacePortReference on PortReference {
 
   @override
   String toString() => '$interfaceReference.${super.toString()}';
+
+  @override
+  InterfacePortReference slice(int endIndex, int startIndex);
 }
