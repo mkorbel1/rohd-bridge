@@ -160,5 +160,7 @@ void main() {
     print(top.generateSynth());
   });
 
+  //TODO: some tests with actually *delayed* port maps
+
   test('port mapped interface connected down to', () async {});
 }

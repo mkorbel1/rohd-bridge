@@ -90,7 +90,7 @@ mixin InterfacePortReference on PortReference {
   /// Returns either the `internal interface` port or the external interface
   /// port, depending on the resolved direction and whether an internal
   /// interface exists.
-  @override
+  @override //TODO: this is broken...
   Logic get port => (!isDirectionless &&
               (direction == PortDirection.input ||
                   direction == PortDirection.inOut)
@@ -100,13 +100,43 @@ mixin InterfacePortReference on PortReference {
       .port(portName);
 
   @override
-  // TODO(mkorbel1): remove lint waiver pending https://github.com/dart-lang/sdk/issues/56532
-  // ignore: unused_element
-  Logic get _receiver => !isDirectionless &&
-          (direction == PortDirection.input || direction == PortDirection.inOut)
-      ? interfaceReference.interface.port(portName)
-      : (interfaceReference.internalInterface ?? interfaceReference.interface)
-          .port(portName);
+  Logic get _internalPort {
+    return (interfaceReference.internalInterface ??
+            interfaceReference.interface)
+        .port(portName);
+    // return interfaceReference.internalInterface!.port(portName);
+    if (interfaceReference.internalInterface != null) {
+      return interfaceReference.internalInterface!.port(portName);
+    }
+
+    final applicablePortMaps = interfaceReference.portMaps
+        .where((e) => e.interfacePort.portName == portName);
+
+    if (applicablePortMaps.isEmpty) {
+      throw RohdBridgeException(
+          'Cannot identify internal port as no port maps exist.');
+    } else if (applicablePortMaps.length > 1) {
+      throw RohdBridgeException(
+          'Cannot identify internal port since there are multiple port maps:'
+          ' $applicablePortMaps');
+    } else {
+      return applicablePortMaps.first.port.port;
+    }
+  }
+
+  @override
+  Logic get _externalPort => interfaceReference.interface.port(portName);
+
+  //TODO: rm old code
+
+  // @override
+  // // TODO(mkorbel1): remove lint waiver pending https://github.com/dart-lang/sdk/issues/56532
+  // // ignore: unused_element
+  // Logic get _receiver => !isDirectionless &&
+  //         (direction == PortDirection.input || direction == PortDirection.inOut)
+  //     ? interfaceReference.interface.port(portName)
+  //     : (interfaceReference.internalInterface ?? interfaceReference.interface)
+  //         .port(portName);
 
   @override
   String toString() => '$interfaceReference.${super.toString()}';

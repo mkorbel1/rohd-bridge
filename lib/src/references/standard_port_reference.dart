@@ -43,38 +43,35 @@ class StandardPortReference extends PortReference {
       _standardPortAccessRegex.hasMatch(portAccessString);
 
   @override
-  Logic get _receiver => direction == PortDirection.input
-      ? module.inputSource(portName)
-      : direction == PortDirection.output
-          ? module.output(portName)
-          : module.inOutSource(portName);
-
-  @override
-  Logic get _internalPort => direction == PortDirection.input
-      ? module.input(portName)
-      : direction == PortDirection.output
-          ? module.output(portName)
-          : module.inOut(portName);
-
-  @override
   void gets(PortReference other) {
     if (other is StandardPortReference) {
-      if (port.isInOut || other.port.isInOut) {
-        final (receiver: receiver, driver: driver) =
-            _inOutReceiverAndDriver(other);
+      final (receiver: receiver, driver: driver) =
+          _relativeReceiverAndDriver(other);
+      receiver <= driver;
 
-        receiver <= driver;
-      } else {
-        _receiver <= other.portSubset;
-      }
+      //TODO: rm old code
+
+      // if (port.isInOut || other.port.isInOut) {
+      //   final (receiver: receiver, driver: driver) =
+      //       _inOutReceiverAndDriver(other);
+
+      //   receiver <= driver;
+      // } else {
+      //   _receiver <= other.portSubset;
+      // }
     } else if (other is SlicePortReference) {
-      dynamic otherDriver = other.portSubset;
-      var receiver = _receiver;
+      final otherDriver = _relativeDriverSubset(other);
+      final receiver = _relativeReceiverAndDriver(other).receiver;
 
-      if (port.isInOut || other.port.isInOut) {
-        otherDriver = _inOutReceiverAndDriverSubsets(other).driver;
-        receiver = _inOutReceiverAndDriver(other).receiver;
-      }
+      //TODO: rm old code
+
+      // dynamic otherDriver = other.portSubset;
+      // var receiver = _receiver;
+
+      // if (port.isInOut || other.port.isInOut) {
+      //   otherDriver = _inOutReceiverAndDriverSubsets(other).driver;
+      //   receiver = _inOutReceiverAndDriver(other).receiver;
+      // }
 
       if (otherDriver is Logic) {
         receiver <= otherDriver;
@@ -121,7 +118,7 @@ class StandardPortReference extends PortReference {
 
   @override
   void getsLogic(Logic other) {
-    _receiver <= other;
+    _externalPort <= other;
   }
 
   @override

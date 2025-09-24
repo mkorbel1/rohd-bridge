@@ -124,7 +124,9 @@ class InterfaceReference<InterfaceType extends PairInterface>
     _internalInterface = interface.clone() as InterfaceType;
 
     for (final portMap in portMaps) {
-      portMap.connectInternalIfPresent();
+      if (portMap.isConnected) {
+        portMap.connectInternalIfPresent();
+      }
     }
   }
 
@@ -306,12 +308,14 @@ class InterfaceReference<InterfaceType extends PairInterface>
   ///
   /// The [other] must be on this reference's [module]'s parent.
   void connectUpTo(InterfaceReference other) {
-    _connectAllPortMaps(exceptPorts: null);
-    other._connectAllPortMaps(exceptPorts: null);
+    // TODO(mkorbel1): remove restriction that it must be adjacent!
 
     if (other.internalInterface == null) {
       other._introduceInternalInterface();
     }
+
+    _connectAllPortMaps(exceptPorts: null);
+    other._connectAllPortMaps(exceptPorts: null);
 
     switch (role) {
       case (PairRole.provider):
@@ -353,6 +357,8 @@ class InterfaceReference<InterfaceType extends PairInterface>
     if (other.role == role) {
       throw RohdBridgeException('Cannot connect interfaces of the same roles');
     }
+
+    //TODO: confirm they have the same parent?
 
     _connectAllPortMaps(exceptPorts: exceptPorts);
     other._connectAllPortMaps(exceptPorts: exceptPorts);
@@ -432,32 +438,35 @@ class InterfaceReference<InterfaceType extends PairInterface>
   ///
   /// The [other] must be on a sub-module of this [module].
   void connectDownTo(InterfaceReference other) {
-    _connectAllPortMaps(exceptPorts: null);
-    other._connectAllPortMaps(exceptPorts: null);
-
+    // TODO(mkorbel1): remove restriction that it must be adjacent!
     if (internalInterface == null) {
       _introduceInternalInterface();
     }
 
+    _connectAllPortMaps(exceptPorts: null);
+    other._connectAllPortMaps(exceptPorts: null);
+
+    //TODO: shouldnt this be internalInterface.driveOther(other.interface)??
+    //TODO: this function has no coverage!!
     switch (role) {
       case (PairRole.provider):
-        interface
-          ..driveOther(other.internalInterface!, const [
+        internalInterface!
+          ..driveOther(other.interface, const [
             PairDirection.fromProvider,
             PairDirection.sharedInputs,
             PairDirection.commonInOuts,
           ])
-          ..receiveOther(other.internalInterface!, const [
+          ..receiveOther(other.interface, const [
             PairDirection.fromConsumer,
           ]);
       case (PairRole.consumer):
-        interface
-          ..driveOther(other.internalInterface!, const [
+        internalInterface!
+          ..driveOther(other.interface, const [
             PairDirection.fromConsumer,
             PairDirection.sharedInputs,
             PairDirection.commonInOuts,
           ])
-          ..receiveOther(other.internalInterface!, const [
+          ..receiveOther(other.interface, const [
             PairDirection.fromProvider,
           ]);
     }
