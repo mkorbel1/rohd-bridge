@@ -81,10 +81,11 @@ class PortMap {
       case PortDirection.output:
         interfacePort.gets(port);
     }
-    _isConnected = true;
 
     // in case there has been an internal interface created
     connectInternalIfPresent(); //TODO: should gets not take care of it?
+
+    _isConnected = true;
 
     return true;
   }
@@ -96,10 +97,7 @@ class PortMap {
   /// interface has been created.
   @internal
   void connectInternalIfPresent() {
-    final internalIntfPort = interfacePort.interfaceReference.internalInterface
-        ?.port(interfacePort.portName);
-
-    if (internalIntfPort == null) {
+    if (interfacePort.interfaceReference.internalInterface == null) {
       return;
     }
 

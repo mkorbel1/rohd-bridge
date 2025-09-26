@@ -209,12 +209,24 @@ void main() {
         name: 'myIntf', role: PairRole.provider, connect: false);
 
     // before connection
-    topIntf.addPortMap(
-        topIntf.port('fp1').slice(2, 1), top.port('tfp1').slice(3, 2));
+    topIntf
+      ..addPortMap(
+          topIntf.port('fp1').slice(2, 1), top.port('tfp1').slice(3, 2))
+      ..addPortMap(
+          topIntf.port('fc1').slice(2, 1), top.port('tfc1').slice(3, 2))
+      ..addPortMap(
+          topIntf.port('cio1').slice(2, 1), top.port('tcio1').slice(3, 2));
 
     leafIntf.connectUpTo(topIntf);
 
     // after connection
+    topIntf
+      ..addPortMap(
+          topIntf.port('fp2').slice(2, 1), top.port('tfp2').slice(3, 2))
+      ..addPortMap(
+          topIntf.port('fc2').slice(2, 1), top.port('tfc2').slice(3, 2))
+      ..addPortMap(
+          topIntf.port('cio2').slice(2, 1), top.port('tcio2').slice(3, 2));
 
     await top.build();
 
@@ -223,6 +235,11 @@ void main() {
     leafIntf.internalInterface!.port('fp1').put('x10x');
     expect(topIntf.interface.port('fp1').value, LogicValue.ofString('z10z'));
     expect(top.output('tfp1').value, LogicValue.ofString('zz10zz'));
+
+    leafIntf.internalInterface!.port('fp2').put('xxxxx01x');
+    expect(
+        topIntf.interface.port('fp2').value, LogicValue.ofString('zzzzz01z'));
+    expect(top.output('tfp2').value, LogicValue.ofString('01zz'));
   });
 
   //TODO: some tests with actually *delayed* port maps (connect: false)
