@@ -524,4 +524,57 @@ void main() {
       });
     }
   });
+
+  test('split directions to submodules', () async {
+    final top = BridgeModule('top')
+      ..createPort('tfp', PortDirection.output, width: 2)
+      ..createPort('tfc', PortDirection.input, width: 2);
+
+    final leaves = [for (var i = 0; i < 2; i++) BridgeModule('leaf$i')]
+      ..forEach(top.addSubModule);
+
+    final tis = [
+      for (var i = 0; i < 2; i++)
+        top.addInterface(SimpleIntf(),
+            name: 'ti$i', role: PairRole.provider, connect: false)
+    ];
+
+    final lis = [
+      for (var i = 0; i < 2; i++)
+        leaves[i].addInterface(SimpleIntf(),
+            name: 'li', role: PairRole.provider, connect: false)
+    ];
+
+    // create port maps & connect interfaces
+    for (var i = 0; i < 2; i++) {
+      tis[i]
+        ..addPortMap(tis[i].port('fp'), top.port('tfp')[i])
+        ..addPortMap(tis[i].port('fc'), top.port('tfc')[i]);
+
+      lis[i]
+        ..addPortMap(lis[i].port('fp'),
+            leaves[i].createPort('lfp', PortDirection.output))
+        ..addPortMap(lis[i].port('fc'),
+            leaves[i].createPort('lfc', PortDirection.input));
+
+      connectInterfaces(tis[i], lis[i]);
+    }
+
+    await top.build();
+
+    // make sure all the connections worked
+    for (var i = 0; i < 2; i++) {
+      leaves[i].output('lfp').put(1);
+      expect(top.output('tfp').value[i], LogicValue.one);
+      expect(tis[i].interface.port('fp').value, LogicValue.one);
+      leaves[i].output('lfp').put(0);
+
+      top.inputSource('tfc').put(1 << i);
+      expect(leaves[i].input('lfc').value.toInt(), 1);
+      expect(lis[i].interface.port('fc').value, LogicValue.one);
+      top.inputSource('tfc').put(0);
+    }
+
+    print(top.generateSynth());
+  });
 }
