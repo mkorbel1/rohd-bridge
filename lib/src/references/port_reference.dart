@@ -180,8 +180,9 @@ sealed class PortReference extends Reference {
         final includesOneIntfPortRef =
             [this, other].whereType<InterfacePortReference>().length == 1;
 
-        //TODO: what if its 2?
+        //TODO: what if its 2? test?
 
+        // special handling for interface port reference connections
         if (includesOneIntfPortRef) {
           final portDir =
               this is! InterfacePortReference ? direction : other.direction;
@@ -231,7 +232,39 @@ sealed class PortReference extends Reference {
 
     switch (loc) {
       case _RelativePortLocation.sameModule:
-        return other._internalPortSubset;
+        final includesOneIntfPortRef =
+            [this, other].whereType<InterfacePortReference>().length == 1;
+
+        //TODO: what if its 2? test?
+
+        //TODO: remove copy/paste between these two functions
+
+        // special handling for interface port reference connections
+        if (includesOneIntfPortRef) {
+          final portDir =
+              this is! InterfacePortReference ? direction : other.direction;
+
+          switch (portDir) {
+            case PortDirection.input || PortDirection.inOut:
+              if (other is InterfacePortReference) {
+                // this is the external side connection
+                return other._externalPortSubset;
+              } else {
+                // this is the internal side connection
+                return other._internalPortSubset;
+              }
+            case PortDirection.output:
+              if (other is InterfacePortReference) {
+                // this is the internal side connection
+                return other._internalPortSubset;
+              } else {
+                // this is the external side connection
+                return other._externalPortSubset;
+              }
+          }
+        }
+
+      // return other._internalPortSubset;
       case _RelativePortLocation.sameLevel:
         return other._externalPortSubset;
       case _RelativePortLocation.thisAboveOther:

@@ -208,14 +208,20 @@ void main() {
     final topIntf = top.addInterface(SimpleIntf2(),
         name: 'myIntf', role: PairRole.provider, connect: false);
 
+    // before connection
     topIntf.addPortMap(
         topIntf.port('fp1').slice(2, 1), top.port('tfp1').slice(3, 2));
 
     leafIntf.connectUpTo(topIntf);
 
+    // after connection
+
     await top.build();
 
     print(top.generateSynth());
+
+    leafIntf.internalInterface!.port('fp1').put('x10x');
+    expect(topIntf.interface.port('fp1').value, LogicValue.ofString('zz10zz'));
   });
 
   //TODO: some tests with actually *delayed* port maps
