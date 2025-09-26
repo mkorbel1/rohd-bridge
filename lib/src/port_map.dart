@@ -101,7 +101,7 @@ class PortMap {
       return;
     }
 
-    //TODO: will the gets magically work here?
+    // the `gets` accounts for special directionality here
     switch (port.direction) {
       case PortDirection.input || PortDirection.inOut:
         interfacePort.gets(port);

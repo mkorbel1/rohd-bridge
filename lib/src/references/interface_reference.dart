@@ -228,7 +228,11 @@ class InterfaceReference<InterfaceType extends PairInterface>
     Set<String>? exceptPorts,
     String Function(String logical)? portUniquify,
   }) {
-    // TODO(mkorbel1): remove restriction that it must be adjacent!
+    // TODO(mkorbel1): remove restriction that it must be adjacent (https://github.com/intel/rohd-bridge/issues/13)
+    if (module.parent != newModule) {
+      throw RohdBridgeException(
+          'The newModule must be the direct parent of this module.');
+    }
 
     _connectAllPortMaps(exceptPorts: exceptPorts);
 
@@ -306,11 +310,12 @@ class InterfaceReference<InterfaceType extends PairInterface>
   ///
   /// The [other] must be on this reference's [module]'s parent.
   void connectUpTo(InterfaceReference other) {
-    // TODO(mkorbel1): remove restriction that it must be adjacent!
-    assert(
-        module.parent == other.module,
-        "The other interface must be on the parent module of this interface's"
-        ' module.');
+    // TODO(mkorbel1): remove restriction that it must be adjacent (https://github.com/intel/rohd-bridge/issues/13)
+    if (module.parent != other.module) {
+      throw RohdBridgeException(
+          "The other interface must be on the parent module of this interface's"
+          ' module.');
+    }
 
     if (other.internalInterface == null) {
       other._introduceInternalInterface();
@@ -356,11 +361,15 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// Throws an exception if both interfaces have the same role.
   void connectTo(InterfaceReference other,
       {Set<String> exceptPorts = const {}}) {
+    // TODO(mkorbel1): remove restriction that it must be adjacent (https://github.com/intel/rohd-bridge/issues/13)
+    if (other.module.parent != module.parent) {
+      throw RohdBridgeException('Both interfaces must be on modules that share'
+          ' the same parent module.');
+    }
+
     if (other.role == role) {
       throw RohdBridgeException('Cannot connect interfaces of the same roles');
     }
-
-    //TODO: confirm they have the same parent?
 
     _connectAllPortMaps(exceptPorts: exceptPorts);
     other._connectAllPortMaps(exceptPorts: exceptPorts);
@@ -413,7 +422,12 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// The [subModule] must be a child of this interface's [module].
   InterfaceReference punchDownTo(BridgeModule subModule,
       {String? newIntfName, bool allowNameUniquification = false}) {
-    // TODO(mkorbel1): remove restriction that it must be adjacent!
+    // TODO(mkorbel1): remove restriction that it must be adjacent (https://github.com/intel/rohd-bridge/issues/13)
+    if (subModule.parent != module) {
+      throw RohdBridgeException(
+          'The subModule must be a direct child of this module.');
+    }
+
     _connectAllPortMaps(exceptPorts: null);
 
     final newRef = subModule.addInterface(
@@ -436,11 +450,12 @@ class InterfaceReference<InterfaceType extends PairInterface>
   ///
   /// The [other] must be on a sub-module of this [module].
   void connectDownTo(InterfaceReference other) {
-    // TODO(mkorbel1): remove restriction that it must be adjacent!
-    assert(
-        other.module.parent == module,
-        "The other interface must be on a child module of this interface's"
-        ' module.');
+    // TODO(mkorbel1): remove restriction that it must be adjacent (https://github.com/intel/rohd-bridge/issues/13)
+    if (other.module.parent != module) {
+      throw RohdBridgeException(
+          "The other interface must be on a child module of this interface's"
+          ' module.');
+    }
 
     if (internalInterface == null) {
       _introduceInternalInterface();
