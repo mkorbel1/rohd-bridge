@@ -48,7 +48,8 @@ class BadMappingModule extends BridgeModule {
     addInterface(AccessIntf(), name: 'accessIntf', role: PairRole.consumer);
     addInput('myInput', null, width: 4);
     addPortMap(
-        port('myInput'), interface('accessIntf').port('smallPortFromProvider'));
+        port('myInput'), interface('accessIntf').port('smallPortFromProvider'),
+        connect: true);
   }
 }
 
@@ -137,7 +138,8 @@ void main() {
     await top.build();
   });
 
-  test('port connection to interface with internal interface throws', () {
+  test('port connection to interface with connected internal interface throws',
+      () {
     expect(BadMappingModule.new, throwsException);
   });
 
