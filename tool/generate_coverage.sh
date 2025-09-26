@@ -25,6 +25,6 @@ dart pub global run coverage:test_with_coverage --branch-coverage --out=${covera
 
 # requires installing "lcov":
 # > sudo apt install lcov
-genhtml --output-directory=${html_dir} --rc lcov_branch_coverage=1 ${coverage_dir}/lcov.info
+genhtml --output-directory=${html_dir} --rc branch_coverage=1 --ignore-errors category ${coverage_dir}/lcov.info
 
 printf '\n%s\n\n' "Open ${html_dir}/index.html to review code coverage results."
