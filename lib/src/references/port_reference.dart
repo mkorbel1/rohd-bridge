@@ -140,7 +140,7 @@ sealed class PortReference extends Reference {
           : module.inOutSource(portName);
 
   /// The internal port subset used for connections within the module.
-  dynamic get _internalPortSubset => portSubset;
+  dynamic get _internalPortSubset;
 
   /// The external port subset used for connections outside the module.
   dynamic get _externalPortSubset;
@@ -273,41 +273,6 @@ sealed class PortReference extends Reference {
         return other._internalPortSubset;
     }
   }
-
-  //TODO: rm old code
-
-  // ({Logic receiver, Logic driver}) _inOutReceiverAndDriver(
-  //     PortReference other) {
-  //   assert(port.isInOut || other.port.isInOut, 'Invalid direction');
-
-  //   final loc = _relativeLocationOf(other);
-
-  //   final receiver = (loc.otherAboveThis || loc.isAtSameLevel)
-  //       ? _externalPort
-  //       : _internalPort;
-
-  //   final driver =
-  //       loc.otherAboveThis ? other._internalPort : other._externalPort;
-
-  //   return (driver: driver, receiver: receiver);
-  // }
-
-  // ({dynamic receiver, dynamic driver}) _inOutReceiverAndDriverSubsets(
-  //     PortReference other) {
-  //   assert(port.isInOut || other.port.isInOut, 'Invalid direction');
-
-  //   final loc = _relativeLocationOf(other);
-
-  //   final receiver = (loc.otherAboveThis || loc.isAtSameLevel)
-  //       ? _externalPortSubset
-  //       : _internalPortSubset;
-
-  //   final driver = loc.otherAboveThis
-  //       ? other._internalPortSubset
-  //       : other._externalPortSubset;
-
-  //   return (driver: driver, receiver: receiver);
-  // }
 
   /// Ties this port to a constant [value].
   ///

@@ -48,30 +48,9 @@ class StandardPortReference extends PortReference {
       final (receiver: receiver, driver: driver) =
           _relativeReceiverAndDriver(other);
       receiver <= driver;
-
-      //TODO: rm old code
-
-      // if (port.isInOut || other.port.isInOut) {
-      //   final (receiver: receiver, driver: driver) =
-      //       _inOutReceiverAndDriver(other);
-
-      //   receiver <= driver;
-      // } else {
-      //   _receiver <= other.portSubset;
-      // }
     } else if (other is SlicePortReference) {
       final otherDriver = _relativeDriverSubset(other);
       final receiver = _relativeReceiverAndDriver(other).receiver;
-
-      //TODO: rm old code
-
-      // dynamic otherDriver = other.portSubset;
-      // var receiver = _receiver;
-
-      // if (port.isInOut || other.port.isInOut) {
-      //   otherDriver = _inOutReceiverAndDriverSubsets(other).driver;
-      //   receiver = _inOutReceiverAndDriver(other).receiver;
-      // }
 
       if (otherDriver is Logic) {
         receiver <= otherDriver;

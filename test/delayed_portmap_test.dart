@@ -572,7 +572,5 @@ void main() {
       expect(lis[i].interface.port('fc').value, LogicValue.one);
       top.inputSource('tfc').put(0);
     }
-
-    print(top.generateSynth());
   });
 }

@@ -260,17 +260,6 @@ class SlicePortReference extends PortReference {
     var receiverPort = _relativeReceiverAndDriver(other).receiver;
     final otherDriver = _relativeDriverSubset(other);
 
-    //TODO: rm old code
-
-    // Logic receiverPort;
-    // var otherDriver = other.portSubset;
-    // if (port.isInOut || other.port.isInOut) {
-    //   receiverPort = _inOutReceiverAndDriver(other).receiver;
-    //   otherDriver = _inOutReceiverAndDriverSubsets(other).driver;
-    // } else {
-    //   receiverPort = _receiver;
-    // }
-
     int? leafIndex;
 
     if ((receiverPort is! LogicArray && port is! LogicArray) ||
