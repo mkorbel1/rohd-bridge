@@ -464,7 +464,6 @@ class InterfaceReference<InterfaceType extends PairInterface>
     _connectAllPortMaps(exceptPorts: null);
     other._connectAllPortMaps(exceptPorts: null);
 
-    //TODO: this function has no coverage!!
     switch (role) {
       case (PairRole.provider):
         internalInterface!
