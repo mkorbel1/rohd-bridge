@@ -89,10 +89,11 @@ void main() {
     for (final receiverEx in receivers) {
       for (final driverEx in drivers) {
         test('$driverEx -> $receiverEx', () {
-          final mod = IntfPortAccessModule();
+          final modRx = IntfPortAccessModule();
+          final modTx = IntfPortAccessModule();
 
-          final receiver = receiverEx.portGetter(mod);
-          final driver = driverEx.portGetter(mod);
+          final receiver = receiverEx.portGetter(modRx);
+          final driver = driverEx.portGetter(modTx);
 
           receiver.gets(driver);
           driver.port.put(5);

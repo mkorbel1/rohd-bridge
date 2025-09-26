@@ -264,7 +264,7 @@ sealed class PortReference extends Reference {
           }
         }
 
-      // return other._internalPortSubset;
+        return other._internalPortSubset;
       case _RelativePortLocation.sameLevel:
         return other._externalPortSubset;
       case _RelativePortLocation.thisAboveOther:
