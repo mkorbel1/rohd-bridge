@@ -230,8 +230,6 @@ void main() {
 
     await top.build();
 
-    print(top.generateSynth());
-
     leafIntf.internalInterface!.port('fp1').put('x10x');
     expect(topIntf.interface.port('fp1').value, LogicValue.ofString('z10z'));
     expect(top.output('tfp1').value, LogicValue.ofString('zz10zz'));
@@ -240,6 +238,23 @@ void main() {
     expect(
         topIntf.interface.port('fp2').value, LogicValue.ofString('zzzzz01z'));
     expect(top.output('tfp2').value, LogicValue.ofString('01zz'));
+
+    topIntf.interface.port('fc1').put('x11x');
+    expect(leafIntf.internalInterface!.port('fc1').value,
+        LogicValue.ofString('z11z'));
+
+    topIntf.interface.port('fc2').put('xxxxx11x');
+    expect(leafIntf.internalInterface!.port('fc2').value,
+        LogicValue.ofString('zzzzz11z'));
+
+    leafIntf.internalInterface!.port('cio1').put('x01x');
+    expect(topIntf.interface.port('cio1').value, LogicValue.ofString('z01z'));
+    expect(top.inOut('tcio1').value, LogicValue.ofString('zz01zz'));
+
+    topIntf.interface.port('cio2').put('xxxxx10x');
+    expect(leafIntf.internalInterface!.port('cio2').value,
+        LogicValue.ofString('zzzzz10z'));
+    expect(top.inOut('tcio2').value, LogicValue.ofString('10zz'));
   });
 
   //TODO: some tests with actually *delayed* port maps (connect: false)
