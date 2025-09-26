@@ -221,10 +221,13 @@ void main() {
     print(top.generateSynth());
 
     leafIntf.internalInterface!.port('fp1').put('x10x');
-    expect(topIntf.interface.port('fp1').value, LogicValue.ofString('zz10zz'));
+    expect(topIntf.interface.port('fp1').value, LogicValue.ofString('z10z'));
+    expect(top.output('tfp1').value, LogicValue.ofString('zz10zz'));
   });
 
-  //TODO: some tests with actually *delayed* port maps
+  //TODO: some tests with actually *delayed* port maps (connect: false)
+
+  //TODO: check with port maps on the leaf and parent
 
   test('port mapped interface connected down to', () async {});
 }

@@ -365,6 +365,9 @@ class SlicePortReference extends PortReference {
   dynamic get _externalPortSubset => _getPortSubset(_externalPort);
 
   @override
+  dynamic get _internalPortSubset => _getPortSubset(_internalPort);
+
+  @override
   late final dynamic portSubset = _getPortSubset(port);
   dynamic _getPortSubset(Logic p) {
     var d = p;
