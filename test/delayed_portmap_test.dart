@@ -477,9 +477,9 @@ void main() {
                 ..addSubModule(leaf)
                 ..pullUpPort(leaf.createPort('dummy', PortDirection.input));
 
-              final leafIntf = leaf.addInterface(SimpleIntf2(),
+              leaf.addInterface(SimpleIntf2(),
                   name: 'myIntf', role: PairRole.provider, connect: false);
-              final topIntf = top.addInterface(SimpleIntf2(),
+              top.addInterface(SimpleIntf2(),
                   name: 'myIntf', role: PairRole.provider, connect: false);
 
               makeConnections(top, leaf);
@@ -509,9 +509,9 @@ void main() {
                 ..addSubModule(leaf)
                 ..pullUpPort(leaf.createPort('dummy', PortDirection.input));
 
-              final leafIntf = leaf.addInterface(SimpleIntf2(),
+              leaf.addInterface(SimpleIntf2(),
                   name: 'myIntf', role: PairRole.consumer, connect: false);
-              final topIntf = top.addInterface(SimpleIntf2(),
+              top.addInterface(SimpleIntf2(),
                   name: 'myIntf', role: PairRole.consumer, connect: false);
 
               makeConnections(top, leaf);
