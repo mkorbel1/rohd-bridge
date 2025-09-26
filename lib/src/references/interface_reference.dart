@@ -10,6 +10,10 @@
 //   Suhas Virmani <suhas.virmani@intel.com>
 //   Max Korbel <max.korbel@intel.com>
 
+// we ignore this because the `_internalInterface` can be populated late, but
+//  equality checks and hashCode are safe on the rest of it.
+// ignore_for_file: avoid_equals_and_hash_code_on_mutable_classes
+
 part of 'references.dart';
 
 /// A [Reference] to an interface on a [BridgeModule].
@@ -19,7 +23,6 @@ part of 'references.dart';
 /// interface (visible from outside the module) and the optional internal
 /// interface (visible from inside the module), along with the port mappings
 /// between them.
-@immutable
 class InterfaceReference<InterfaceType extends PairInterface>
     extends Reference {
   /// The name of this interface within the [module].

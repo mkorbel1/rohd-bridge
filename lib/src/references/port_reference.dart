@@ -202,7 +202,9 @@ sealed class PortReference extends Reference {
               }
           }
         }
+
         return (driver: other._externalPort, receiver: _externalPort);
+
       case _RelativePortLocation.sameLevel:
         return (driver: other._externalPort, receiver: _externalPort);
       case _RelativePortLocation.thisAboveOther:
