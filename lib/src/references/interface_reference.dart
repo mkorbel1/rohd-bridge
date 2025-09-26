@@ -307,6 +307,10 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// The [other] must be on this reference's [module]'s parent.
   void connectUpTo(InterfaceReference other) {
     // TODO(mkorbel1): remove restriction that it must be adjacent!
+    assert(
+        module.parent == other.module,
+        "The other interface must be on the parent module of this interface's"
+        ' module.');
 
     if (other.internalInterface == null) {
       other._introduceInternalInterface();
@@ -433,6 +437,11 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// The [other] must be on a sub-module of this [module].
   void connectDownTo(InterfaceReference other) {
     // TODO(mkorbel1): remove restriction that it must be adjacent!
+    assert(
+        other.module.parent == module,
+        "The other interface must be on a child module of this interface's"
+        ' module.');
+
     if (internalInterface == null) {
       _introduceInternalInterface();
     }
@@ -446,22 +455,22 @@ class InterfaceReference<InterfaceType extends PairInterface>
       case (PairRole.provider):
         internalInterface!
           ..driveOther(other.interface, const [
-            PairDirection.fromProvider,
+            PairDirection.fromConsumer,
             PairDirection.sharedInputs,
             PairDirection.commonInOuts,
           ])
           ..receiveOther(other.interface, const [
-            PairDirection.fromConsumer,
+            PairDirection.fromProvider,
           ]);
       case (PairRole.consumer):
         internalInterface!
           ..driveOther(other.interface, const [
-            PairDirection.fromConsumer,
+            PairDirection.fromProvider,
             PairDirection.sharedInputs,
             PairDirection.commonInOuts,
           ])
           ..receiveOther(other.interface, const [
-            PairDirection.fromProvider,
+            PairDirection.fromConsumer,
           ]);
     }
   }
