@@ -415,11 +415,9 @@ void main() {
 
               // before connection
               leafIntf
-                  .addPortMap(leafIntf.port('fc1').slice(2, 1),
-                      leaf.port('lfc1').slice(3, 2),
-                      connect: false)
-                  .connect();
-              leafIntf
+                ..addPortMap(leafIntf.port('fc1').slice(2, 1),
+                    leaf.port('lfc1').slice(3, 2),
+                    connect: false)
                 ..addPortMap(leafIntf.port('fp1').slice(2, 1),
                     leaf.port('lfp1').slice(3, 2))
                 ..addPortMap(leafIntf.port('cio1').slice(2, 1),

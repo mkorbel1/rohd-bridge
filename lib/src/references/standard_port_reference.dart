@@ -97,6 +97,9 @@ class StandardPortReference extends PortReference {
   dynamic get _externalPortSubset => _externalPort;
 
   @override
+  Logic get _internalPortSubset => _internalPort;
+
+  @override
   PortReference replicateTo(BridgeModule newModule, PortDirection direction,
       {String? newPortName}) {
     newPortName ??= portName;

@@ -90,7 +90,7 @@ mixin InterfacePortReference on PortReference {
   /// Returns either the `internal interface` port or the external interface
   /// port, depending on the resolved direction and whether an internal
   /// interface exists.
-  @override //TODO: this is broken...
+  @override //TODO: this is broken... MAJOR BUG
   Logic get port => (!isDirectionless &&
               (direction == PortDirection.input ||
                   direction == PortDirection.inOut)
