@@ -202,6 +202,62 @@ void main() {
           expect(leafIntf.internalInterface!.port('cio2').value.toInt(), 0x4);
         });
 
+        test('simple consumer', () async {
+          final top = BridgeModule('top')
+            ..createPort('tfp1', PortDirection.input, width: 4)
+            ..createPort('tfp2', PortDirection.input, width: 8)
+            ..createPort('tfc1', PortDirection.output, width: 4)
+            ..createPort('tfc2', PortDirection.output, width: 8)
+            ..createPort('tcio1', PortDirection.inOut, width: 4)
+            ..createPort('tcio2', PortDirection.inOut, width: 8);
+
+          final leaf = BridgeModule('leaf');
+          top
+            ..addSubModule(leaf)
+            ..pullUpPort(leaf.createPort('dummy', PortDirection.input));
+
+          final leafIntf = leaf.addInterface(SimpleIntf2(),
+              name: 'myIntf', role: PairRole.consumer);
+          final topIntf = top.addInterface(SimpleIntf2(),
+              name: 'myIntf', role: PairRole.consumer, connect: false);
+
+          expect(topIntf.internalInterface, isNull);
+
+          // before connection
+          topIntf
+            ..addPortMap(topIntf.port('fp1'), top.port('tfp1'))
+            ..addPortMap(topIntf.port('fc1'), top.port('tfc1'))
+            ..addPortMap(topIntf.port('cio1'), top.port('tcio1'));
+
+          connectionFunc(leafIntf, topIntf);
+
+          // after connection
+          topIntf
+            ..addPortMap(topIntf.port('fp2'), top.port('tfp2'))
+            ..addPortMap(topIntf.port('fc2'), top.port('tfc2'))
+            ..addPortMap(topIntf.port('cio2'), top.port('tcio2'));
+
+          await top.build();
+
+          topIntf.interface.port('fp1').put(0xa);
+          expect(leafIntf.internalInterface!.port('fp1').value.toInt(), 0xa);
+
+          topIntf.interface.port('fp2').put(0x5b);
+          expect(leafIntf.internalInterface!.port('fp2').value.toInt(), 0x5b);
+
+          leafIntf.internalInterface!.port('fc1').put(0x3);
+          expect(topIntf.interface.port('fc1').value.toInt(), 0x3);
+
+          leafIntf.internalInterface!.port('fc2').put(0x7e);
+          expect(topIntf.interface.port('fc2').value.toInt(), 0x7e);
+
+          topIntf.interface.port('cio1').put(0x1);
+          expect(leafIntf.internalInterface!.port('cio1').value.toInt(), 0x1);
+
+          leafIntf.internalInterface!.port('cio2').put(0x4);
+          expect(topIntf.interface.port('cio2').value.toInt(), 0x4);
+        });
+
         group('with slices', () {
           void checkSlicey(BridgeModule top, BridgeModule leaf) {
             final leafIntf = leaf.interface('myIntf');
