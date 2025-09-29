@@ -314,6 +314,8 @@ void main() {
 
   //TODO: what if instead of port map, we make a connection between interface and port!?
   // should that just be an error? probably? or maybe it should be external?
+  // -if a port and interface port are on the same module, in the same direction, it should have been a port map?
+  // -if they are different directions, then based on the directionality of the connection, we can deduce internal or external
 
   test('connect interface ports on the same module', () async {
     final leaf = BridgeModule('leaf');
@@ -330,8 +332,18 @@ void main() {
 
     await top.build();
 
-    print(top.generateSynth());
+    intf1.port('myProviderPort').port.put(0x12);
+    expect(intf2.port('myProviderPort').port.value.toInt(), 0x12);
 
-    //TODO: check that the connection happens *outside* the module
+    intf2.port('myConsumerPort').port.put(0x34);
+    expect(intf1.port('myConsumerPort').port.value.toInt(), 0x34);
+
+    final sv = top.generateSynth();
+
+    // ensure no logic at all is inside the leaf
+    expect(sv, contains('''
+);
+
+endmodule : leaf'''));
   });
 }
