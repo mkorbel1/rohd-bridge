@@ -99,6 +99,14 @@ sealed class PortReference extends Reference {
           ' ${module.name} should be done using port maps.');
     }
 
+    if (other.module.parent == module.parent &&
+        direction == other.direction &&
+        (direction != PortDirection.inOut)) {
+      throw RohdBridgeException(
+          'Cannot connect two ports with the same direction'
+          ' on sibling modules.');
+    }
+
     getsInternal(other);
   }
 

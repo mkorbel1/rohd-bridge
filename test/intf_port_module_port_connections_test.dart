@@ -36,30 +36,37 @@ class _PortTestCase {
   String toString() => '${direction.name} ${isIntfPort ? 'intf port' : 'port'}';
 }
 
+enum _RelativePosition {
+  srcAboveDst,
+  dstAboveSrc,
+  sameLevel,
+  sameModule;
+}
+
 class _PortConnectionTestCase {
   final _PortTestCase src;
   final _PortTestCase dst;
-  final bool onSameModule;
+  final _RelativePosition relativePosition;
 
   // ignore: avoid_positional_boolean_parameters
-  const _PortConnectionTestCase(this.src, this.dst, this.onSameModule);
+  const _PortConnectionTestCase(this.src, this.dst, this.relativePosition);
 
   @override
-  String toString() =>
-      '${onSameModule ? 'on same module' : 'on diff modules'}  $src -> $dst ';
+  String toString() => '${relativePosition.name}  $src -> $dst ';
 }
 
 class TestIntf extends PairInterface {
   final bool isIo;
-  TestIntf({required this.isIo})
+  final int width;
+  TestIntf({required this.isIo, required this.width})
       : super(portsFromProvider: [
-          if (!isIo) Logic.port('testPort', 8),
+          if (!isIo) Logic.port('testPort', width),
         ], commonInOutPorts: [
-          if (isIo) LogicNet.port('testPort', 8)
+          if (isIo) LogicNet.port('testPort', width)
         ]);
 
   @override
-  TestIntf clone() => TestIntf(isIo: isIo);
+  TestIntf clone() => TestIntf(isIo: isIo, width: width);
 }
 
 void main() {
@@ -73,10 +80,10 @@ void main() {
     final portConnectionTestCases = [
       for (final src in portTestCases)
         for (final dst in portTestCases)
-          for (final onSameModule in [true, false])
+          for (final relativePos in _RelativePosition.values)
             if ((src.direction == PortDirection.inOut) ==
                 (dst.direction == PortDirection.inOut))
-              _PortConnectionTestCase(src, dst, onSameModule)
+              _PortConnectionTestCase(src, dst, relativePos)
     ];
 
     final connectApis = [
@@ -89,105 +96,148 @@ void main() {
 
 //TODO: also do slicing!
 
-    for (final connectApi in connectApis) {
-      final connectName = connectApi.$1;
-      final connectFunc = connectApi.$2;
+    for (final withPortSlicing in [false, true]) {
+      for (final withIntfPortSlicing in [false, true]) {
+        group(withIntfPortSlicing ? 'sliced intf port' : 'standard intf port',
+            () {
+          group(withPortSlicing ? 'sliced port' : 'standard port', () {
+            for (final connectApi in connectApis) {
+              final connectName = connectApi.$1;
+              final connectFunc = connectApi.$2;
 
-      group('using $connectName', () {
-        for (final testCase in portConnectionTestCases) {
-          test(testCase.toString(), () async {
-            final srcMod = BridgeModule('modA');
-            final dstMod =
-                testCase.onSameModule ? srcMod : BridgeModule('modB');
+              group('using $connectName', () {
+                for (final testCase in portConnectionTestCases) {
+                  test(testCase.toString(), () async {
+                    final srcMod = BridgeModule('modA');
 
-            final top = BridgeModule('top')
-              ..addSubModule(srcMod)
-              ..pullUpPort(srcMod.createPort('dummy', PortDirection.input));
+                    final dstMod = testCase.relativePosition ==
+                            _RelativePosition.sameModule
+                        ? srcMod
+                        : BridgeModule('modB');
 
-            if (!testCase.onSameModule) {
-              top.addSubModule(dstMod);
-            }
+                    final top = BridgeModule('top');
 
-            final srcPort =
-                srcMod.createPort('src', testCase.src.direction, width: 8);
-            final dstPort =
-                dstMod.createPort('dst', testCase.dst.direction, width: 8);
+                    switch (testCase.relativePosition) {
+                      case _RelativePosition.srcAboveDst:
+                        srcMod.addSubModule(dstMod);
+                        top.addSubModule(srcMod);
+                      case _RelativePosition.dstAboveSrc:
+                        dstMod.addSubModule(srcMod);
+                        top.addSubModule(dstMod);
+                      case _RelativePosition.sameLevel:
+                      case _RelativePosition.sameModule:
+                        top.addSubModule(srcMod);
+                    }
 
-            var srcPortRef = srcPort;
-            var dstPortRef = dstPort;
+                    top
+                      ..pullUpPort(
+                          srcMod.createPort('dummy1', PortDirection.input))
+                      ..pullUpPort(
+                          dstMod.createPort('dummy2', PortDirection.input));
 
-            var expectFailure = false;
+                    final rawPortWidth = withPortSlicing ? 16 : 8;
+                    final rawIntfPortWidth = withIntfPortSlicing ? 16 : 8;
 
-            if (testCase.src.isIntfPort ||
-                testCase.dst.isIntfPort && testCase.onSameModule) {
-              // cannot have intf port on same module, must be a port map
-              expectFailure = true;
-            }
+                    final srcPort = srcMod.createPort(
+                        'src', testCase.src.direction,
+                        width: rawPortWidth);
+                    final dstPort = dstMod.createPort(
+                        'dst', testCase.dst.direction,
+                        width: rawPortWidth);
 
-            if (!testCase.onSameModule &&
-                testCase.src.direction == testCase.dst.direction &&
-                connectName != 'gets') {
-              // this is like a pass-through, not yet supported
-              expectFailure = true;
-            }
+                    var srcPortRef = srcPort;
+                    var dstPortRef = dstPort;
 
-            try {
-              if (testCase.src.isIntfPort) {
-                final srcIntf = srcMod.addInterface(
-                    TestIntf(
-                        isIo: testCase.src.direction == PortDirection.inOut),
-                    name: 'testIntfA',
-                    role: srcPort.direction == PortDirection.input
-                        ? PairRole.consumer
-                        : PairRole.provider,
-                    connect: false);
+                    if (withPortSlicing) {
+                      srcPortRef = srcPortRef.slice(7, 0);
+                      dstPortRef = dstPortRef.slice(7, 0);
+                    }
 
-                srcMod.addPortMap(srcPort, srcIntf.port('testPort'),
-                    connect: true);
+                    var expectFailure = false;
 
-                srcPortRef = srcIntf.port('testPort');
-              }
+                    if (testCase.src.isIntfPort ||
+                        testCase.dst.isIntfPort &&
+                            testCase.relativePosition ==
+                                _RelativePosition.sameModule) {
+                      // cannot have intf port conn on same module, must be a port map
+                      expectFailure = true;
+                    }
 
-              if (testCase.dst.isIntfPort) {
-                final dstIntf = dstMod.addInterface(
-                    TestIntf(
-                        isIo: testCase.dst.direction == PortDirection.inOut),
-                    name: 'testIntfB',
-                    role: dstPort.direction == PortDirection.output
-                        ? PairRole.provider
-                        : PairRole.consumer,
-                    connect: false);
+                    if (testCase.relativePosition ==
+                            _RelativePosition.sameLevel &&
+                        testCase.src.direction == testCase.dst.direction) {
+                      // this is like a pass-through, not yet supported
+                      expectFailure = true;
+                    }
 
-                dstMod.addPortMap(dstPort, dstIntf.port('testPort'),
-                    connect: true);
+                    try {
+                      if (testCase.src.isIntfPort) {
+                        final srcIntf = srcMod.addInterface(
+                            TestIntf(
+                                isIo: testCase.src.direction ==
+                                    PortDirection.inOut,
+                                width: rawIntfPortWidth),
+                            name: 'testIntfA',
+                            role: srcPort.direction == PortDirection.input
+                                ? PairRole.consumer
+                                : PairRole.provider,
+                            connect: false);
 
-                dstPortRef = dstIntf.port('testPort');
-              }
+                        srcMod.addPortMap(
+                            srcPortRef, srcIntf.port('testPort').slice(7, 0),
+                            connect: true);
 
-              connectFunc(srcPortRef, dstPortRef);
+                        srcPortRef = srcIntf.port('testPort');
+                      }
 
-              await top.build();
+                      if (testCase.dst.isIntfPort) {
+                        final dstIntf = dstMod.addInterface(
+                            TestIntf(
+                                isIo: testCase.dst.direction ==
+                                    PortDirection.inOut,
+                                width: rawIntfPortWidth),
+                            name: 'testIntfB',
+                            role: dstPort.direction == PortDirection.output
+                                ? PairRole.provider
+                                : PairRole.consumer,
+                            connect: false);
 
-              final val = LogicValue.of(0x45, width: 8);
-              srcPort.port.put(val);
-              expect(dstPort.port.value, equals(val));
+                        dstMod.addPortMap(
+                            dstPortRef, dstIntf.port('testPort').slice(7, 0),
+                            connect: true);
 
-              // print(top.generateSynth());
+                        dstPortRef = dstIntf.port('testPort');
+                      }
 
-              if (expectFailure) {
-                fail('Expected failure but connection succeeded');
-              }
-            } on RohdBridgeException catch (e) {
-              // we only catch RohdBridgeException! make sure good err messages!
+                      connectFunc(srcPortRef, dstPortRef);
 
-              if (!expectFailure) {
-                // rethrow; //TODO?
-                fail('Unexpected failure: $e');
-              }
+                      await top.build();
+
+                      final val = LogicValue.of(0x45, width: 8)
+                          .zeroExtend(rawPortWidth);
+                      srcPort.port.put(val);
+                      expect(dstPort.port.value, equals(val));
+
+                      // print(top.generateSynth());
+
+                      if (expectFailure) {
+                        fail('Expected failure but connection succeeded');
+                      }
+                    } on RohdBridgeException catch (e) {
+                      // we only catch RohdBridgeException! make sure good err messages!
+
+                      if (!expectFailure) {
+                        // rethrow; //TODO?
+                        fail('Unexpected failure: $e');
+                      }
+                    }
+                  });
+                }
+              });
             }
           });
-        }
-      });
+        });
+      }
     }
   });
 }
