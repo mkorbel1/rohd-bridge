@@ -346,15 +346,16 @@ void main() {
   });
 
   test('non-array source for array input', () {
-    final dut = BridgeModule('dut')
-      ..addOutput('b', width: 8)
+    final dutSrc = BridgeModule('dutSrc')..addOutput('b', width: 8);
+
+    final dutDst = BridgeModule('dutDst')
       ..addInputArray('a', Logic(width: 8),
           dimensions: [2, 2], elementWidth: 2);
 
-    dut.port('a[1][1:0]').gets(dut.port('b[3:0]'));
+    dutDst.port('a[1][1:0]').gets(dutSrc.port('b[3:0]'));
 
-    dut.output('b').put(1, fill: true);
-    expect(dut.input('a').value, LogicValue.of('1111zzzz'));
+    dutSrc.output('b').put(1, fill: true);
+    expect(dutDst.input('a').value, LogicValue.of('1111zzzz'));
   });
 
   void testInoutResult(PortReference pInEx, PortReference pOutEx,
