@@ -79,74 +79,102 @@ void main() {
               _PortConnectionTestCase(src, dst, onSameModule)
     ];
 
-    for (final testCase in portConnectionTestCases) {
-      test(testCase.toString(), () async {
-        final srcMod = BridgeModule('modA');
-        final dstMod = testCase.onSameModule ? srcMod : BridgeModule('modB');
+    final connectApis = [
+      (
+        'connectPorts',
+        (PortReference src, PortReference dst) => connectPorts(src, dst)
+      ),
+      ('gets', (PortReference src, PortReference dst) => dst.gets(src)),
+    ];
 
-        final top = BridgeModule('top')
-          ..addSubModule(srcMod)
-          ..pullUpPort(srcMod.createPort('dummy', PortDirection.input));
+    for (final connectApi in connectApis) {
+      group('using ${connectApi.$1}', () {
+        for (final testCase in portConnectionTestCases) {
+          test(testCase.toString(), () async {
+            final srcMod = BridgeModule('modA');
+            final dstMod =
+                testCase.onSameModule ? srcMod : BridgeModule('modB');
 
-        if (!testCase.onSameModule) {
-          top.addSubModule(dstMod);
+            final top = BridgeModule('top')
+              ..addSubModule(srcMod)
+              ..pullUpPort(srcMod.createPort('dummy', PortDirection.input));
+
+            if (!testCase.onSameModule) {
+              top.addSubModule(dstMod);
+            }
+
+            final srcPort =
+                srcMod.createPort('src', testCase.src.direction, width: 8);
+            final dstPort =
+                dstMod.createPort('dst', testCase.dst.direction, width: 8);
+
+            var srcPortRef = srcPort;
+            var dstPortRef = dstPort;
+
+            var expectFailure = false;
+
+            if (!testCase.onSameModule &&
+                testCase.src.direction == testCase.dst.direction) {
+              // this is like a pass-through, not yet supported
+              expectFailure = true;
+            }
+
+            try {
+              if (testCase.src.isIntfPort) {
+                final srcIntf = srcMod.addInterface(
+                    TestIntf(
+                        isIo: testCase.src.direction == PortDirection.inOut),
+                    name: 'testIntfA',
+                    role: srcPort.direction == PortDirection.input
+                        ? PairRole.consumer
+                        : PairRole.provider,
+                    connect: false);
+
+                srcMod.addPortMap(srcPort, srcIntf.port('testPort'),
+                    connect: true);
+
+                srcPortRef = srcIntf.port('testPort');
+              }
+
+              if (testCase.dst.isIntfPort) {
+                final dstIntf = dstMod.addInterface(
+                    TestIntf(
+                        isIo: testCase.dst.direction == PortDirection.inOut),
+                    name: 'testIntfB',
+                    role: dstPort.direction == PortDirection.output
+                        ? PairRole.provider
+                        : PairRole.consumer,
+                    connect: false);
+
+                dstMod.addPortMap(dstPort, dstIntf.port('testPort'),
+                    connect: true);
+
+                dstPortRef = dstIntf.port('testPort');
+              }
+
+              connectApi.$2(srcPortRef, dstPortRef);
+
+              await top.build();
+
+              final val = LogicValue.of(0x45, width: 8);
+              srcPort.port.put(val);
+              expect(dstPort.port.value, equals(val));
+
+              // print(top.generateSynth());
+
+              if (expectFailure) {
+                fail('Expected failure but connection succeeded');
+              }
+            } on RohdBridgeException catch (e) {
+              // we only catch RohdBridgeException! make sure good err messages!
+
+              if (!expectFailure) {
+                // rethrow; //TODO?
+                fail('Unexpected failure: $e');
+              }
+            }
+          });
         }
-
-        final srcPort =
-            srcMod.createPort('src', testCase.src.direction, width: 8);
-        final dstPort =
-            dstMod.createPort('dst', testCase.dst.direction, width: 8);
-
-        var srcPortRef = srcPort;
-        var dstPortRef = dstPort;
-
-        var expectFailure = false;
-
-        // try {
-        if (testCase.src.isIntfPort) {
-          final srcIntf = srcMod.addInterface(
-              TestIntf(isIo: testCase.src.direction == PortDirection.inOut),
-              name: 'testIntfA',
-              role: srcPort.direction == PortDirection.input
-                  ? PairRole.consumer
-                  : PairRole.provider,
-              connect: false);
-
-          srcMod.addPortMap(srcPort, srcIntf.port('testPort'), connect: true);
-
-          srcPortRef = srcIntf.port('testPort');
-        }
-
-        if (testCase.dst.isIntfPort) {
-          final dstIntf = dstMod.addInterface(
-              TestIntf(isIo: testCase.dst.direction == PortDirection.inOut),
-              name: 'testIntfB',
-              role: dstPort.direction == PortDirection.output
-                  ? PairRole.provider
-                  : PairRole.consumer,
-              connect: false);
-
-          dstMod.addPortMap(dstPort, dstIntf.port('testPort'), connect: true);
-
-          dstPortRef = dstIntf.port('testPort');
-        }
-
-        connectPorts(srcPortRef, dstPortRef);
-
-        await top.build();
-
-        print(top.generateSynth());
-
-        if (expectFailure) {
-          fail('Expected failure but connection succeeded');
-        }
-        // } on RohdBridgeException catch (e) {
-        //   // we only catch RohdBridgeException! make sure good err messages!
-
-        //   if (!expectFailure) {
-        //     rethrow;
-        //   }
-        // }
       });
     }
   });

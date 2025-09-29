@@ -100,8 +100,13 @@ extension RohdBridgeModuleExtensions on Module {
   /// [instance], where the first element is `this` and the last element is
   /// [instance].
   ///
-  /// If there is no path found, returns `null`.
+  /// If there is no path found, returns `null`. If [instance] is the same as
+  /// `this`, returns `null`.
   List<Module>? getHierarchyDownTo(Module instance) {
+    if (instance == this) {
+      return null;
+    }
+
     Module? parent = instance;
 
     final fullPath = <Module>[];

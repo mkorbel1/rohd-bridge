@@ -252,4 +252,9 @@ void main() {
     mod1.port('apple').port.put(1);
     expect(mod2.port('apple').port.value, LogicValue.of('z1zz'));
   });
+
+  test('hierarchy down to is null for same module', () {
+    final mod1 = BridgeModule('mod1');
+    expect(mod1.getHierarchyDownTo(mod1), isNull);
+  });
 }
