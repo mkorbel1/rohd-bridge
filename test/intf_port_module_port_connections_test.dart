@@ -165,7 +165,8 @@ void main() {
 
                     if (testCase.relativePosition ==
                             _RelativePosition.sameLevel &&
-                        testCase.src.direction == testCase.dst.direction) {
+                        testCase.src.direction == testCase.dst.direction &&
+                        testCase.src.direction != PortDirection.inOut) {
                       // this is like a pass-through, not yet supported
                       expectFailure = true;
                     }
@@ -192,6 +193,21 @@ void main() {
                                 _RelativePosition.dstAboveSrc) &&
                         (testCase.src.direction != testCase.dst.direction)) {
                       // vertical connections should have the same direction
+                      expectFailure = true;
+                    }
+
+                    if (testCase.relativePosition ==
+                            _RelativePosition.sameLevel &&
+                        testCase.src.direction == PortDirection.input &&
+                        testCase.dst.direction == PortDirection.output) {
+                      // input cannot drive output at same level
+                      expectFailure = true;
+                    }
+
+                    if (testCase.relativePosition ==
+                            _RelativePosition.sameModule &&
+                        testCase.dst.direction == PortDirection.input) {
+                      // port cant drive input on same module
                       expectFailure = true;
                     }
 
@@ -238,12 +254,12 @@ void main() {
 
                       await top.build();
 
+                      // print(top.generateSynth());
+
                       final val = LogicValue.of(0x45, width: 8)
                           .zeroExtend(rawPortWidth);
                       srcPort.port.put(val);
                       expect(dstPort.port.value.slice(7, 0), equals(val));
-
-                      // print(top.generateSynth());
 
                       if (expectFailure) {
                         fail('Expected failure but connection succeeded');
