@@ -43,7 +43,8 @@ class StandardPortReference extends PortReference {
       _standardPortAccessRegex.hasMatch(portAccessString);
 
   @override
-  void gets(PortReference other) {
+  @internal
+  void getsInternal(PortReference other) {
     if (other is StandardPortReference) {
       final (receiver: receiver, driver: driver) =
           _relativeReceiverAndDriver(other);

@@ -256,7 +256,8 @@ class SlicePortReference extends PortReference {
   static const ListEquality<int> _listEquality = ListEquality<int>();
 
   @override
-  void gets(PortReference other) {
+  @internal
+  void getsInternal(PortReference other) {
     var receiverPort = _relativeReceiverAndDriver(other).receiver;
     final otherDriver = _relativeDriverSubset(other);
 

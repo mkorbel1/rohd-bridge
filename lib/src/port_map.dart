@@ -70,9 +70,9 @@ class PortMap {
 
     switch (port.direction) {
       case PortDirection.input || PortDirection.inOut:
-        port.gets(interfacePort);
+        port.getsInternal(interfacePort);
       case PortDirection.output:
-        interfacePort.gets(port);
+        interfacePort.getsInternal(port);
     }
 
     // in case there has been an internal interface created
@@ -97,9 +97,9 @@ class PortMap {
     // the `gets` accounts for special directionality here
     switch (port.direction) {
       case PortDirection.input || PortDirection.inOut:
-        interfacePort.gets(port);
+        interfacePort.getsInternal(port);
       case PortDirection.output:
-        port.gets(interfacePort);
+        port.getsInternal(interfacePort);
     }
   }
 

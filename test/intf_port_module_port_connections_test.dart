@@ -87,8 +87,13 @@ void main() {
       ('gets', (PortReference src, PortReference dst) => dst.gets(src)),
     ];
 
+//TODO: also do slicing!
+
     for (final connectApi in connectApis) {
-      group('using ${connectApi.$1}', () {
+      final connectName = connectApi.$1;
+      final connectFunc = connectApi.$2;
+
+      group('using $connectName', () {
         for (final testCase in portConnectionTestCases) {
           test(testCase.toString(), () async {
             final srcMod = BridgeModule('modA');
@@ -113,8 +118,15 @@ void main() {
 
             var expectFailure = false;
 
+            if (testCase.src.isIntfPort ||
+                testCase.dst.isIntfPort && testCase.onSameModule) {
+              // cannot have intf port on same module, must be a port map
+              expectFailure = true;
+            }
+
             if (!testCase.onSameModule &&
-                testCase.src.direction == testCase.dst.direction) {
+                testCase.src.direction == testCase.dst.direction &&
+                connectName != 'gets') {
               // this is like a pass-through, not yet supported
               expectFailure = true;
             }
@@ -152,7 +164,7 @@ void main() {
                 dstPortRef = dstIntf.port('testPort');
               }
 
-              connectApi.$2(srcPortRef, dstPortRef);
+              connectFunc(srcPortRef, dstPortRef);
 
               await top.build();
 

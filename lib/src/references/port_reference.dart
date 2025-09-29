@@ -91,7 +91,20 @@ sealed class PortReference extends Reference {
   /// This establishes a connection where the signal from [other] drives this
   /// port. The connection respects the hierarchical nature of the modules and
   /// handles directionality of ports appropriately.
-  void gets(PortReference other);
+  void gets(PortReference other) {
+    if (other.module == module &&
+        (other is InterfacePortReference || this is InterfacePortReference)) {
+      throw RohdBridgeException(
+          'Connections involving interface ports on the same module'
+          ' ${module.name} should be done using port maps.');
+    }
+
+    getsInternal(other);
+  }
+
+  /// Implementation of [gets] after some validation.
+  @internal
+  void getsInternal(PortReference other);
 
   /// Connects this port to be driven by a [Logic] signal.
   ///
@@ -203,7 +216,7 @@ sealed class PortReference extends Reference {
           }
         }
 
-        return (driver: other._externalPort, receiver: _externalPort);
+        return (driver: other._internalPort, receiver: _internalPort);
 
       case _RelativePortLocation.sameLevel:
         return (driver: other._externalPort, receiver: _externalPort);
@@ -226,8 +239,6 @@ sealed class PortReference extends Reference {
             [this, other].whereType<InterfacePortReference>().length == 1;
 
         //TODO: what if its 2? test?
-
-        //TODO: remove copy/paste between these two functions
 
         // special handling for interface port reference connections
         if (includesOneIntfPortRef) {

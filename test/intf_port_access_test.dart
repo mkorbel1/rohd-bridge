@@ -33,7 +33,7 @@ class AccessIntf extends PairInterface {
 }
 
 class IntfPortAccessModule extends BridgeModule {
-  IntfPortAccessModule([PairRole role = PairRole.provider])
+  IntfPortAccessModule({PairRole role = PairRole.provider, super.name})
       : super('intfPortAccessModule') {
     addInterface(AccessIntf(), name: 'accessIntf', role: role);
     addInput('myInput', null, width: 4);
@@ -90,8 +90,8 @@ void main() {
     for (final receiverEx in receivers) {
       for (final driverEx in drivers) {
         test('$driverEx -> $receiverEx', () {
-          final modRx = IntfPortAccessModule();
-          final modTx = IntfPortAccessModule();
+          final modRx = IntfPortAccessModule(name: 'modRx');
+          final modTx = IntfPortAccessModule(name: 'modTx');
 
           final receiver = receiverEx.portGetter(modRx);
           final driver = driverEx.portGetter(modTx);
