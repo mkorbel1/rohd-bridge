@@ -312,11 +312,6 @@ void main() {
     });
   });
 
-  //TODO: what if instead of port map, we make a connection between interface and port!?
-  // should that just be an error? probably? or maybe it should be external?
-  // -if a port and interface port are on the same module, in the same direction, it should have been a port map?
-  // -if they are different directions, then based on the directionality of the connection, we can deduce internal or external
-
   test('connect interface ports on the same module', () async {
     final leaf = BridgeModule('leaf');
     final intf1 =
