@@ -140,6 +140,22 @@ sealed class PortReference extends Reference {
           ' input $this on the same module');
     }
 
+    if (relativeLocation == _RelativePortLocation.otherAboveThis &&
+        direction == PortDirection.input &&
+        other.direction == PortDirection.output) {
+      throw RohdBridgeException(
+          'A parent module (${other.module}) output ($other) cannot drive a '
+          'submodule ($module) input ($this).');
+    }
+
+    if (relativeLocation == _RelativePortLocation.thisAboveOther &&
+        direction == PortDirection.input &&
+        other.direction == PortDirection.output) {
+      throw RohdBridgeException(
+          'A submodule (${other.module}) output ($other) cannot drive a '
+          'parent module ($module) input ($this).');
+    }
+
     getsInternal(other);
   }
 
