@@ -186,6 +186,15 @@ void main() {
                       expectFailure = true;
                     }
 
+                    if ((testCase.relativePosition ==
+                                _RelativePosition.srcAboveDst ||
+                            testCase.relativePosition ==
+                                _RelativePosition.dstAboveSrc) &&
+                        (testCase.src.direction != testCase.dst.direction)) {
+                      // vertical connections should have the same direction
+                      expectFailure = true;
+                    }
+
                     try {
                       if (testCase.src.isIntfPort) {
                         final srcIntf = srcMod.addInterface(
