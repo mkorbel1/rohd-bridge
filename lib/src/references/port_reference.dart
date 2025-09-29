@@ -92,19 +92,37 @@ sealed class PortReference extends Reference {
   /// port. The connection respects the hierarchical nature of the modules and
   /// handles directionality of ports appropriately.
   void gets(PortReference other) {
-    if (other.module == module &&
+    final relativeLocation = _relativeLocationOf(other);
+
+    if (relativeLocation == _RelativePortLocation.sameModule &&
         (other is InterfacePortReference || this is InterfacePortReference)) {
       throw RohdBridgeException(
           'Connections involving interface ports on the same module'
           ' ${module.name} should be done using port maps.');
     }
 
-    if (other.module.parent == module.parent &&
+    if (relativeLocation == _RelativePortLocation.sameLevel &&
         direction == other.direction &&
         (direction != PortDirection.inOut)) {
       throw RohdBridgeException(
           'Cannot connect two ports with the same direction'
           ' on sibling modules.');
+    }
+
+    if (relativeLocation == _RelativePortLocation.thisAboveOther &&
+        direction == PortDirection.input &&
+        other.direction == PortDirection.input) {
+      throw RohdBridgeException(
+          'A submodule (${other.module}) input ($other) cannot drive a parent '
+          'module ($module) input ($this).');
+    }
+
+    if (relativeLocation == _RelativePortLocation.otherAboveThis &&
+        direction == PortDirection.output &&
+        other.direction == PortDirection.output) {
+      throw RohdBridgeException(
+          'A parent module (${other.module}) output ($other) cannot drive a '
+          'submodule ($module) output ($this).');
     }
 
     getsInternal(other);
@@ -147,6 +165,9 @@ sealed class PortReference extends Reference {
   dynamic get portSubset;
 
   /// The internal port used for connections within the module.
+  ///
+  /// This may have side-effects like introducing new internal interfaces on
+  /// [InterfaceReference].
   Logic get _internalPort => direction == PortDirection.input
       ? module.input(portName)
       : direction == PortDirection.output

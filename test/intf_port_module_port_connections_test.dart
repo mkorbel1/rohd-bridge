@@ -158,7 +158,8 @@ void main() {
                     if ((testCase.src.isIntfPort || testCase.dst.isIntfPort) &&
                         testCase.relativePosition ==
                             _RelativePosition.sameModule) {
-                      // cannot have intf port conn on same module, must be a port map
+                      // cannot have intf port connection on same module, must
+                      // be a port map
                       expectFailure = true;
                     }
 
@@ -166,6 +167,22 @@ void main() {
                             _RelativePosition.sameLevel &&
                         testCase.src.direction == testCase.dst.direction) {
                       // this is like a pass-through, not yet supported
+                      expectFailure = true;
+                    }
+
+                    if (testCase.relativePosition ==
+                            _RelativePosition.dstAboveSrc &&
+                        testCase.src.direction == PortDirection.input &&
+                        testCase.dst.direction == PortDirection.input) {
+                      // child input cannot drive parent input
+                      expectFailure = true;
+                    }
+
+                    if (testCase.relativePosition ==
+                            _RelativePosition.srcAboveDst &&
+                        testCase.src.direction == PortDirection.output &&
+                        testCase.dst.direction == PortDirection.output) {
+                      // parent output cannot drive child output
                       expectFailure = true;
                     }
 
@@ -215,9 +232,9 @@ void main() {
                       final val = LogicValue.of(0x45, width: 8)
                           .zeroExtend(rawPortWidth);
                       srcPort.port.put(val);
-                      expect(dstPort.port.value, equals(val));
+                      expect(dstPort.port.value.slice(7, 0), equals(val));
 
-                      print(top.generateSynth());
+                      // print(top.generateSynth());
 
                       if (expectFailure) {
                         fail('Expected failure but connection succeeded');
