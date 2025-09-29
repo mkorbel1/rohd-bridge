@@ -228,7 +228,7 @@ void main() {
                             srcPortRef, srcIntf.port('testPort').slice(7, 0),
                             connect: true);
 
-                        srcPortRef = srcIntf.port('testPort');
+                        srcPortRef = srcIntf.port('testPort').slice(7, 0);
                       }
 
                       if (testCase.dst.isIntfPort) {
@@ -247,7 +247,7 @@ void main() {
                             dstPortRef, dstIntf.port('testPort').slice(7, 0),
                             connect: true);
 
-                        dstPortRef = dstIntf.port('testPort');
+                        dstPortRef = dstIntf.port('testPort').slice(7, 0);
                       }
 
                       connectFunc(srcPortRef, dstPortRef);
@@ -256,8 +256,7 @@ void main() {
 
                       // print(top.generateSynth());
 
-                      final val = LogicValue.of(0x45, width: 8)
-                          .zeroExtend(rawPortWidth);
+                      final val = LogicValue.of(0x45, width: 8);
                       srcPort.port.put(val);
                       expect(dstPort.port.value.slice(7, 0), equals(val));
 
