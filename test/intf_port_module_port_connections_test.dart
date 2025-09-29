@@ -94,8 +94,6 @@ void main() {
       ('gets', (PortReference src, PortReference dst) => dst.gets(src)),
     ];
 
-//TODO: also do slicing!
-
     for (final withPortSlicing in [false, true]) {
       for (final withIntfPortSlicing in [false, true]) {
         group(withIntfPortSlicing ? 'sliced intf port' : 'standard intf port',
@@ -125,15 +123,17 @@ void main() {
                         dstMod.addSubModule(srcMod);
                         top.addSubModule(dstMod);
                       case _RelativePosition.sameLevel:
+                        top.addSubModule(srcMod);
+                        top.addSubModule(dstMod);
                       case _RelativePosition.sameModule:
                         top.addSubModule(srcMod);
                     }
 
                     top
                       ..pullUpPort(
-                          srcMod.createPort('dummy1', PortDirection.input))
+                          srcMod.createPort('dummyIn', PortDirection.input))
                       ..pullUpPort(
-                          dstMod.createPort('dummy2', PortDirection.input));
+                          dstMod.createPort('dummyOut', PortDirection.output));
 
                     final rawPortWidth = withPortSlicing ? 16 : 8;
                     final rawIntfPortWidth = withIntfPortSlicing ? 16 : 8;
@@ -155,10 +155,9 @@ void main() {
 
                     var expectFailure = false;
 
-                    if (testCase.src.isIntfPort ||
-                        testCase.dst.isIntfPort &&
-                            testCase.relativePosition ==
-                                _RelativePosition.sameModule) {
+                    if ((testCase.src.isIntfPort || testCase.dst.isIntfPort) &&
+                        testCase.relativePosition ==
+                            _RelativePosition.sameModule) {
                       // cannot have intf port conn on same module, must be a port map
                       expectFailure = true;
                     }
@@ -218,13 +217,14 @@ void main() {
                       srcPort.port.put(val);
                       expect(dstPort.port.value, equals(val));
 
-                      // print(top.generateSynth());
+                      print(top.generateSynth());
 
                       if (expectFailure) {
                         fail('Expected failure but connection succeeded');
                       }
                     } on RohdBridgeException catch (e) {
-                      // we only catch RohdBridgeException! make sure good err messages!
+                      // we only catch RohdBridgeException! make sure we have
+                      // good error messages!
 
                       if (!expectFailure) {
                         // rethrow; //TODO?

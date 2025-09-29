@@ -100,9 +100,18 @@ mixin InterfacePortReference on PortReference {
       .port(portName);
 
   @override
-  Logic get _internalPort =>
-      (interfaceReference.internalInterface ?? interfaceReference.interface)
-          .port(portName);
+  Logic get _internalPort {
+    if (interfaceReference.internalInterface == null) {
+      interfaceReference._introduceInternalInterface();
+    }
+
+    return interfaceReference.internalInterface!.port(portName);
+
+    //TODO rm old
+    // return (interfaceReference.internalInterface ??
+    //         interfaceReference.interface)
+    //     .port(portName);
+  }
 
   @override
   Logic get _externalPort => interfaceReference.interface.port(portName);
