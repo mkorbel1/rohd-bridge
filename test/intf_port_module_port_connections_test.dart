@@ -7,12 +7,6 @@
 // 2025 September 29
 // Author: Max Korbel <max.korbel@intel.com>
 
-// variables:
-// - is port or intf port
-// - directionality of port or intf port
-// - directionality of connection
-// - same module or different module
-
 import 'package:rohd/rohd.dart';
 import 'package:rohd_bridge/src/bridge_module.dart';
 import 'package:rohd_bridge/src/port_direction.dart';
