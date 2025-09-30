@@ -246,8 +246,6 @@ void main() {
 
                       await top.build();
 
-                      // print(top.generateSynth());
-
                       final val = LogicValue.of(0x45, width: 8);
                       srcPort.port.put(val);
                       expect(dstPort.port.value.slice(7, 0), equals(val));
@@ -260,7 +258,6 @@ void main() {
                       // good error messages!
 
                       if (!expectFailure) {
-                        // rethrow; //TODO?
                         fail('Unexpected failure: $e');
                       }
                     }

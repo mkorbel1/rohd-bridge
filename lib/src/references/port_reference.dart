@@ -12,6 +12,7 @@
 
 part of 'references.dart';
 
+/// An enumeration of the possible relative locations of two ports' modules.
 enum _RelativePortLocation {
   thisAboveOther,
   otherAboveThis,
@@ -199,18 +200,18 @@ sealed class PortReference extends Reference {
   ///
   /// This may have side-effects like introducing new internal interfaces on
   /// [InterfaceReference].
-  Logic get _internalPort => direction == PortDirection.input
-      ? module.input(portName)
-      : direction == PortDirection.output
-          ? module.output(portName)
-          : module.inOut(portName);
+  Logic get _internalPort => switch (direction) {
+        PortDirection.input => module.input(portName),
+        PortDirection.output => module.output(portName),
+        PortDirection.inOut => module.inOut(portName),
+      };
 
   /// The external port used for connections outside the module.
-  Logic get _externalPort => direction == PortDirection.input
-      ? module.inputSource(portName)
-      : direction == PortDirection.output
-          ? module.output(portName)
-          : module.inOutSource(portName);
+  Logic get _externalPort => switch (direction) {
+        PortDirection.input => module.inputSource(portName),
+        PortDirection.output => module.output(portName),
+        PortDirection.inOut => module.inOutSource(portName),
+      };
 
   /// The internal port subset used for connections within the module.
   dynamic get _internalPortSubset;
