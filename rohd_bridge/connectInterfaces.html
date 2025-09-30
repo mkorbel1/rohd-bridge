@@ -57,11 +57,11 @@
 <span class="returntype">void</span>
 <span class="name ">connectInterfaces</span>(<wbr><ol class="parameter-list"> <li><span class="parameter" id="connectInterfaces-param-intf1"><span class="type-annotation"><a href="../rohd_bridge/InterfaceReference-class.html">InterfaceReference</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/rohd/0.6.6/rohd/PairInterface-class.html">PairInterface</a></span>&gt;</span></span> <span class="parameter-name">intf1</span>, </span></li>
 <li><span class="parameter" id="connectInterfaces-param-intf2"><span class="type-annotation"><a href="../rohd_bridge/InterfaceReference-class.html">InterfaceReference</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/rohd/0.6.6/rohd/PairInterface-class.html">PairInterface</a></span>&gt;</span></span> <span class="parameter-name">intf2</span>, {</span></li>
-<li><span class="parameter" id="connectInterfaces-param-intf1PathNewName"><span class="type-annotation"><a href="https://api.dart.dev/stable/3.9.3/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">intf1PathNewName</span>, </span></li>
-<li><span class="parameter" id="connectInterfaces-param-intf2PathNewName"><span class="type-annotation"><a href="https://api.dart.dev/stable/3.9.3/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">intf2PathNewName</span>, </span></li>
-<li><span class="parameter" id="connectInterfaces-param-allowIntf1PathUniquification"><span class="type-annotation"><a href="https://api.dart.dev/stable/3.9.3/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">allowIntf1PathUniquification</span> = <span class="default-value">true</span>, </span></li>
-<li><span class="parameter" id="connectInterfaces-param-allowIntf2PathUniquification"><span class="type-annotation"><a href="https://api.dart.dev/stable/3.9.3/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">allowIntf2PathUniquification</span> = <span class="default-value">true</span>, </span></li>
-<li><span class="parameter" id="connectInterfaces-param-exceptPorts"><span class="type-annotation"><a href="https://api.dart.dev/stable/3.9.3/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.dart.dev/stable/3.9.3/dart-core/String-class.html">String</a></span>&gt;</span></span> <span class="parameter-name">exceptPorts</span> = <span class="default-value">const {}</span>, </span></li>
+<li><span class="parameter" id="connectInterfaces-param-intf1PathNewName"><span class="type-annotation"><a href="https://api.dart.dev/stable/3.9.4/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">intf1PathNewName</span>, </span></li>
+<li><span class="parameter" id="connectInterfaces-param-intf2PathNewName"><span class="type-annotation"><a href="https://api.dart.dev/stable/3.9.4/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">intf2PathNewName</span>, </span></li>
+<li><span class="parameter" id="connectInterfaces-param-allowIntf1PathUniquification"><span class="type-annotation"><a href="https://api.dart.dev/stable/3.9.4/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">allowIntf1PathUniquification</span> = <span class="default-value">true</span>, </span></li>
+<li><span class="parameter" id="connectInterfaces-param-allowIntf2PathUniquification"><span class="type-annotation"><a href="https://api.dart.dev/stable/3.9.4/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">allowIntf2PathUniquification</span> = <span class="default-value">true</span>, </span></li>
+<li><span class="parameter" id="connectInterfaces-param-exceptPorts"><span class="type-annotation"><a href="https://api.dart.dev/stable/3.9.4/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.dart.dev/stable/3.9.4/dart-core/String-class.html">String</a></span>&gt;</span></span> <span class="parameter-name">exceptPorts</span> = <span class="default-value">const {}</span>, </span></li>
 </ol>})
 
         
@@ -107,6 +107,14 @@ representing the logical port names to be excluded.</p>
   if (intf1.role != intf2.role) {
     &#47;&#47; up and down case
     final commonParent = findCommonParent(intf1Instance, intf2Instance);
+
+    if (commonParent == intf1Instance || commonParent == intf2Instance) {
+      throw RohdBridgeException(
+          &#39;Vertical connections should have the same role, but the common&#39;
+          &#39; parent of $intf1Instance and $intf2Instance is $commonParent,&#39;
+          &#39; but with mismatched roles ${intf1.role} and ${intf2.role},&#39;
+          &#39; respectively.&#39;);
+    }
 
     if (commonParent == null) {
       throw RohdBridgeException(&#39;No common parent found between&#39;
@@ -158,7 +166,7 @@ representing the logical port names to be excluded.</p>
     final intf2ContainsIntf1 = intf2ToIntf1Path != null;
 
     if (intf1ContainsIntf2) {
-      (intf2ToIntf1Path![1] as BridgeModule)._pullUpInterfaceAndConnect(
+      intf1.module._pullUpInterfaceAndConnect(
         intf2,
         newIntfName: intf2PathNewName,
         allowIntfUniquification: allowIntf2PathUniquification,
@@ -166,7 +174,7 @@ representing the logical port names to be excluded.</p>
         exceptPorts: exceptPorts,
       );
     } else if (intf2ContainsIntf1) {
-      (intf1ToIntf2Path![1] as BridgeModule)._pullUpInterfaceAndConnect(
+      intf2.module._pullUpInterfaceAndConnect(
         intf1,
         newIntfName: intf1PathNewName,
         allowIntfUniquification: allowIntf1PathUniquification,
@@ -209,7 +217,7 @@ representing the logical port names to be excluded.</p>
 <footer>
   <span class="no-break">
     rohd_bridge
-      0.1.0
+      0.1.1
   </span>
   
 </footer>
