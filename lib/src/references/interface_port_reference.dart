@@ -99,6 +99,8 @@ mixin InterfacePortReference on PortReference {
           : interfaceReference.interface)
       .port(portName);
 
+  /// Returns the internal port from the internal interface.  If it does not
+  /// exist, it introduces it.
   @override
   Logic get _internalPort {
     if (interfaceReference.internalInterface == null) {
@@ -106,11 +108,6 @@ mixin InterfacePortReference on PortReference {
     }
 
     return interfaceReference.internalInterface!.port(portName);
-
-    //TODO rm old
-    // return (interfaceReference.internalInterface ??
-    //         interfaceReference.interface)
-    //     .port(portName);
   }
 
   @override

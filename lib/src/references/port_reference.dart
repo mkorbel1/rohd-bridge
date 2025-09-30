@@ -249,8 +249,6 @@ sealed class PortReference extends Reference {
         final includesOneIntfPortRef =
             [this, other].whereType<InterfacePortReference>().length == 1;
 
-        //TODO: what if its 2? test?
-
         // special handling for interface port reference connections
         if (includesOneIntfPortRef) {
           final portDir =
@@ -298,8 +296,6 @@ sealed class PortReference extends Reference {
         final includesOneIntfPortRef =
             [this, other].whereType<InterfacePortReference>().length == 1;
 
-        //TODO: what if its 2? test?
-
         // special handling for interface port reference connections
         if (includesOneIntfPortRef) {
           final portDir =
@@ -326,6 +322,7 @@ sealed class PortReference extends Reference {
         }
 
         return other._internalPortSubset;
+
       case _RelativePortLocation.sameLevel:
         return other._externalPortSubset;
       case _RelativePortLocation.thisAboveOther:
