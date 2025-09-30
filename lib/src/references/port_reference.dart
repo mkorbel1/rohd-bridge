@@ -12,6 +12,14 @@
 
 part of 'references.dart';
 
+/// An enumeration of the possible relative locations of two ports' modules.
+enum _RelativePortLocation {
+  thisAboveOther,
+  otherAboveThis,
+  sameLevel,
+  sameModule,
+}
+
 /// A [Reference] to a port on a [BridgeModule].
 ///
 /// This abstract class provides a unified interface for accessing and
@@ -84,7 +92,77 @@ sealed class PortReference extends Reference {
   /// This establishes a connection where the signal from [other] drives this
   /// port. The connection respects the hierarchical nature of the modules and
   /// handles directionality of ports appropriately.
-  void gets(PortReference other);
+  void gets(PortReference other) {
+    final relativeLocation = _relativeLocationOf(other);
+
+    if (relativeLocation == _RelativePortLocation.sameModule &&
+        (other is InterfacePortReference || this is InterfacePortReference)) {
+      throw RohdBridgeException(
+          'Connections involving interface ports on the same module'
+          ' ${module.name} should be done using port maps.');
+    }
+
+    if (relativeLocation == _RelativePortLocation.sameLevel &&
+        direction == other.direction &&
+        (direction != PortDirection.inOut)) {
+      throw RohdBridgeException(
+          'Cannot connect two ports with the same direction'
+          ' on sibling modules.');
+    }
+
+    if (relativeLocation == _RelativePortLocation.thisAboveOther &&
+        direction == PortDirection.input &&
+        other.direction == PortDirection.input) {
+      throw RohdBridgeException(
+          'A submodule (${other.module}) input ($other) cannot drive a parent '
+          'module ($module) input ($this).');
+    }
+
+    if (relativeLocation == _RelativePortLocation.otherAboveThis &&
+        direction == PortDirection.output &&
+        other.direction == PortDirection.output) {
+      throw RohdBridgeException(
+          'A parent module (${other.module}) output ($other) cannot drive a '
+          'submodule ($module) output ($this).');
+    }
+
+    if (direction == PortDirection.output &&
+        other.direction == PortDirection.input &&
+        relativeLocation != _RelativePortLocation.sameModule) {
+      throw RohdBridgeException(
+          'Cannot use an input $other from ${other.module}'
+          ' to drive $this, an output of $module.');
+    }
+
+    if (relativeLocation == _RelativePortLocation.sameModule &&
+        direction == PortDirection.input) {
+      throw RohdBridgeException(
+          'An port $other on module ${other.module} cannot drive an'
+          ' input $this on the same module');
+    }
+
+    if (relativeLocation == _RelativePortLocation.otherAboveThis &&
+        direction == PortDirection.input &&
+        other.direction == PortDirection.output) {
+      throw RohdBridgeException(
+          'A parent module (${other.module}) output ($other) cannot drive a '
+          'submodule ($module) input ($this).');
+    }
+
+    if (relativeLocation == _RelativePortLocation.thisAboveOther &&
+        direction == PortDirection.input &&
+        other.direction == PortDirection.output) {
+      throw RohdBridgeException(
+          'A submodule (${other.module}) output ($other) cannot drive a '
+          'parent module ($module) input ($this).');
+    }
+
+    getsInternal(other);
+  }
+
+  /// Implementation of [gets] after some validation.
+  @internal
+  void getsInternal(PortReference other);
 
   /// Connects this port to be driven by a [Logic] signal.
   ///
@@ -118,78 +196,141 @@ sealed class PortReference extends Reference {
   /// either within or outside of the [module].
   dynamic get portSubset;
 
-  // TODO(mkorbel1): remove lint waiver pending https://github.com/dart-lang/sdk/issues/56532
-  // ignore: unused_element
-  Logic get _receiver;
+  /// The internal port used for connections within the module.
+  ///
+  /// This may have side-effects like introducing new internal interfaces on
+  /// [InterfaceReference].
+  Logic get _internalPort => switch (direction) {
+        PortDirection.input => module.input(portName),
+        PortDirection.output => module.output(portName),
+        PortDirection.inOut => module.inOut(portName),
+      };
 
-  Logic get _internalPort;
-  Logic get _externalPort => _receiver;
+  /// The external port used for connections outside the module.
+  Logic get _externalPort => switch (direction) {
+        PortDirection.input => module.inputSource(portName),
+        PortDirection.output => module.output(portName),
+        PortDirection.inOut => module.inOutSource(portName),
+      };
 
-  dynamic get _internalPortSubset => portSubset;
+  /// The internal port subset used for connections within the module.
+  dynamic get _internalPortSubset;
+
+  /// The external port subset used for connections outside the module.
   dynamic get _externalPortSubset;
 
-  ({bool otherAboveThis, bool isAtSameLevel, bool thisAboveOther})
-      _relativeLocationOf(PortReference other) {
-    final isAtSameLevel = module.parent == other.module.parent;
-
-    //       above                  below
-    // (source | port)  <-->  (source | port)
-
-    final thisAboveOther = module == other.module.parent;
-    final otherAboveThis = other.module == module.parent;
-
-    if (isAtSameLevel) {
-      assert(!thisAboveOther, 'Invalid hierarchy structure');
-      assert(!otherAboveThis, 'Invalid hierarchy structure');
-    } else if (thisAboveOther) {
-      assert(!isAtSameLevel, 'Invalid hierarchy structure');
-      assert(!otherAboveThis, 'Invalid hierarchy structure');
-    } else if (otherAboveThis) {
-      assert(!thisAboveOther, 'Invalid hierarchy structure');
-      assert(!isAtSameLevel, 'Invalid hierarchy structure');
+  /// Determines the relative position of the [other]s module to this [module].
+  ///
+  /// Assumes that the two ports are in the same hierarchy or one is the parent
+  /// of the other.
+  _RelativePortLocation _relativeLocationOf(PortReference other) {
+    if (module == other.module) {
+      return _RelativePortLocation.sameModule;
+    } else if (module.parent == other.module.parent) {
+      return _RelativePortLocation.sameLevel;
+    } else if (module == other.module.parent) {
+      return _RelativePortLocation.thisAboveOther;
+    } else if (other.module == module.parent) {
+      return _RelativePortLocation.otherAboveThis;
     } else {
       throw RohdBridgeException(
           'Could not determine relative placement of inout ports.');
     }
-
-    return (
-      thisAboveOther: thisAboveOther,
-      otherAboveThis: otherAboveThis,
-      isAtSameLevel: isAtSameLevel
-    );
   }
 
-  ({Logic receiver, Logic driver}) _inOutReceiverAndDriver(
+  /// The receiver and driver considering the relative hierarchy of the ports.
+  ///
+  /// It is assumed that [other] is driving `this` (part of a call to [gets]).
+  ({Logic receiver, Logic driver}) _relativeReceiverAndDriver(
       PortReference other) {
-    assert(port.isInOut || other.port.isInOut, 'Invalid direction');
-
     final loc = _relativeLocationOf(other);
 
-    final receiver = (loc.otherAboveThis || loc.isAtSameLevel)
-        ? _externalPort
-        : _internalPort;
+    switch (loc) {
+      case _RelativePortLocation.sameModule:
+        final includesOneIntfPortRef =
+            [this, other].whereType<InterfacePortReference>().length == 1;
 
-    final driver =
-        loc.otherAboveThis ? other._internalPort : other._externalPort;
+        // special handling for interface port reference connections
+        if (includesOneIntfPortRef) {
+          final portDir =
+              this is! InterfacePortReference ? direction : other.direction;
 
-    return (driver: driver, receiver: receiver);
+          switch (portDir) {
+            case PortDirection.input || PortDirection.inOut:
+              if (other is InterfacePortReference) {
+                // this is the external side connection
+                return (receiver: _externalPort, driver: other._externalPort);
+              } else {
+                // this is the internal side connection
+                return (receiver: _internalPort, driver: other._internalPort);
+              }
+            case PortDirection.output:
+              if (other is InterfacePortReference) {
+                // this is the internal side connection
+                return (receiver: _internalPort, driver: other._internalPort);
+              } else {
+                // this is the external side connection
+                return (receiver: _externalPort, driver: other._externalPort);
+              }
+          }
+        }
+
+        return (driver: other._internalPort, receiver: _internalPort);
+
+      case _RelativePortLocation.sameLevel:
+        return (driver: other._externalPort, receiver: _externalPort);
+      case _RelativePortLocation.thisAboveOther:
+        return (driver: other._externalPort, receiver: _internalPort);
+      case _RelativePortLocation.otherAboveThis:
+        return (driver: other._internalPort, receiver: _externalPort);
+    }
   }
 
-  ({dynamic receiver, dynamic driver}) _inOutReceiverAndDriverSubsets(
-      PortReference other) {
-    assert(port.isInOut || other.port.isInOut, 'Invalid direction');
-
+  /// The driver subset considering the relative hierarchy of the ports.
+  ///
+  /// It is assumed that [other] is driving `this` (part of a call to [gets]).
+  dynamic _relativeDriverSubset(PortReference other) {
     final loc = _relativeLocationOf(other);
 
-    final receiver = (loc.otherAboveThis || loc.isAtSameLevel)
-        ? _externalPortSubset
-        : _internalPortSubset;
+    switch (loc) {
+      case _RelativePortLocation.sameModule:
+        final includesOneIntfPortRef =
+            [this, other].whereType<InterfacePortReference>().length == 1;
 
-    final driver = loc.otherAboveThis
-        ? other._internalPortSubset
-        : other._externalPortSubset;
+        // special handling for interface port reference connections
+        if (includesOneIntfPortRef) {
+          final portDir =
+              this is! InterfacePortReference ? direction : other.direction;
 
-    return (driver: driver, receiver: receiver);
+          switch (portDir) {
+            case PortDirection.input || PortDirection.inOut:
+              if (other is InterfacePortReference) {
+                // this is the external side connection
+                return other._externalPortSubset;
+              } else {
+                // this is the internal side connection
+                return other._internalPortSubset;
+              }
+            case PortDirection.output:
+              if (other is InterfacePortReference) {
+                // this is the internal side connection
+                return other._internalPortSubset;
+              } else {
+                // this is the external side connection
+                return other._externalPortSubset;
+              }
+          }
+        }
+
+        return other._internalPortSubset;
+
+      case _RelativePortLocation.sameLevel:
+        return other._externalPortSubset;
+      case _RelativePortLocation.thisAboveOther:
+        return other._externalPortSubset;
+      case _RelativePortLocation.otherAboveThis:
+        return other._internalPortSubset;
+    }
   }
 
   /// Ties this port to a constant [value].

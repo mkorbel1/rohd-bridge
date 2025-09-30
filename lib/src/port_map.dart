@@ -46,13 +46,7 @@ class PortMap {
 
     if (port.module != interfacePort.interfaceReference.module) {
       throw RohdBridgeException(
-          'Port and InterfacePort must be in the same module.');
-    }
-
-    if (!preConnected &&
-        interfacePort.interfaceReference.internalInterface != null) {
-      throw RohdBridgeException('Cannot connect a port to an interface which'
-          ' already has an internal interface.');
+          'Port and interface port must be on the same module.');
     }
 
     if (port is InterfacePortReference) {
@@ -76,13 +70,37 @@ class PortMap {
 
     switch (port.direction) {
       case PortDirection.input || PortDirection.inOut:
-        port.gets(interfacePort);
+        port.getsInternal(interfacePort);
       case PortDirection.output:
-        interfacePort.gets(port);
+        interfacePort.getsInternal(port);
     }
+
+    // in case there has been an internal interface created
+    connectInternalIfPresent();
+
     _isConnected = true;
 
     return true;
+  }
+
+  /// Connects to the `internalInterface`, if there is one present.
+  ///
+  /// This should only be called internally and only immediately after creating
+  /// an internal interface or when creating a new [PortMap] after an internal
+  /// interface has been created.
+  @internal
+  void connectInternalIfPresent() {
+    if (interfacePort.interfaceReference.internalInterface == null) {
+      return;
+    }
+
+    // the `gets` accounts for special directionality here
+    switch (port.direction) {
+      case PortDirection.input || PortDirection.inOut:
+        interfacePort.getsInternal(port);
+      case PortDirection.output:
+        port.getsInternal(interfacePort);
+    }
   }
 
   @override

@@ -311,4 +311,34 @@ void main() {
               '.sv_myProviderPort(sv_myProviderPort));'));
     });
   });
+
+  test('connect interface ports on the same module', () async {
+    final leaf = BridgeModule('leaf');
+    final intf1 =
+        leaf.addInterface(MyIntf(), name: 'intf1', role: PairRole.provider);
+    final intf2 =
+        leaf.addInterface(MyIntf(), name: 'intf2', role: PairRole.consumer);
+
+    final top = BridgeModule('top')
+      ..addSubModule(leaf)
+      ..pullUpPort(leaf.createPort('dummy', PortDirection.input));
+
+    connectInterfaces(intf1, intf2);
+
+    await top.build();
+
+    intf1.port('myProviderPort').port.put(0x12);
+    expect(intf2.port('myProviderPort').port.value.toInt(), 0x12);
+
+    intf2.port('myConsumerPort').port.put(0x34);
+    expect(intf1.port('myConsumerPort').port.value.toInt(), 0x34);
+
+    final sv = top.generateSynth();
+
+    // ensure no logic at all is inside the leaf
+    expect(sv, contains('''
+);
+
+endmodule : leaf'''));
+  });
 }

@@ -1130,6 +1130,7 @@ void connectPorts(
 
   if (!driverContainsReceiver &&
       !receiverContainsDriver &&
+      driverInstance != receiverInstance &&
       (driver.direction == receiver.direction) &&
       ((driver.direction != PortDirection.inOut) ||
           (receiver.direction != PortDirection.inOut))) {
@@ -1140,9 +1141,16 @@ void connectPorts(
       (receiver.direction != driver.direction) &&
       (receiver.direction != PortDirection.inOut &&
           driver.direction != PortDirection.inOut)) {
+    final containsStr = driverContainsReceiver
+        ? 'driver ${driver.module.name} contains'
+            ' receiver ${receiver.module.name}'
+        : 'receiver ${receiver.module.name} contains'
+            ' driver ${driver.module.name}';
+
     throw RohdBridgeException(
-        'Vertical connections should have the same direction, but one of'
-        ' $driver and $receiver contains the other, but directions are'
+        'Vertical connections should have the same direction,'
+        ' but with $driver driving $receiver, '
+        ' $containsStr, but directions are'
         ' ${driver.direction} and ${receiver.direction}, respectively.');
   } else {
     commonParent =
