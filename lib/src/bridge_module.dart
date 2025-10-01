@@ -1289,7 +1289,7 @@ void connectInterfaces(
   String? intf2PathNewName,
   bool allowIntf1PathUniquification = true,
   bool allowIntf2PathUniquification = true,
-  Set<String> exceptPorts = const {},
+  Set<String>? exceptPorts,
   // TODO(mkorbel): finish these,
   //  possibly wont be needed for connectInterfaces
   //  String Function(String logical, String? physical)? portUniquify1,
@@ -1320,7 +1320,7 @@ void connectInterfaces(
     }
     final unusedPortsOnDriver = intf1.getUnmappedInterfacePorts();
     final unusedPortOnReceiver = intf2.getUnmappedInterfacePorts();
-    if (exceptPorts.isNotEmpty) {
+    if (exceptPorts != null && exceptPorts.isNotEmpty) {
       unusedPortsOnDriver.removeWhere(exceptPorts.contains);
       unusedPortOnReceiver.removeWhere(exceptPorts.contains);
     }
