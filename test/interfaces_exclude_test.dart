@@ -40,14 +40,13 @@ class LM1 extends BridgeModule {
       connect: false,
     );
 
-    addOutput('orange', width: 4);
+    addOutput('dummy', width: 8);
 
+    addOutput('orange', width: 4);
     addPortMap(port('orange'), inf1.port('orange'));
 
     addInput('apple', Logic(name: 'apple', width: 4), width: 4);
     addPortMap(port('apple'), inf1.port('apple'));
-
-    addOutputArray('out1', dimensions: [5, 1]);
 
     addOutput('fc', width: 8);
     addPortMap(port('fc'), inf1.port('fc'));
@@ -68,14 +67,13 @@ class LM2 extends BridgeModule {
     addOutput('dummy', width: 8);
 
     addOutput('apple', width: 4);
-
     addPortMap(port('apple'), inf1.port('apple'));
 
     addInput('orange', Logic(name: 'orange', width: 4), width: 4);
     addPortMap(port('orange'), inf1.port('orange'));
 
-    addOutput('out1', width: 8);
-    addPortMap(port('out1'), inf1.port('fp'));
+    addOutput('fp', width: 8);
+    addPortMap(port('fp'), inf1.port('fp'));
   }
 }
 
@@ -151,9 +149,7 @@ void main() {
     }
   });
 
-  //Test plan:
-  // - BridgeModule.pullUpInterface
-  //   -> passes correctly to connectUpTo, punchUpTo
+  // TODO Test plan:
   // - connectInterfaces
   //   -> passes correctly to pullUpInterface, _pullUpInterfaceAndConnect
   // - InterfaceReference
@@ -169,20 +165,61 @@ void main() {
   //     -> _connectAllPortMaps (both), receive and drive other (both)
 
   test('pullUpInterface with exceptPorts', () async {
+    // - BridgeModule.pullUpInterface
+    //   -> passes correctly to connectUpTo, punchUpTo
+
     final top = BridgeModule('top');
     final leaf = LM1();
     final mid = BridgeModule('mid')..addSubModule(leaf);
     top
       ..addSubModule(mid)
-      ..pullUpInterface(leaf.interface('intf1'),
-          exceptPorts: {'orange', 'apple'});
+      ..pullUpInterface(leaf.interface('intf1'), exceptPorts: {'fc', 'fp'});
 
     await top.build();
 
-    expect(top.hasPortWithSubstring('apple'), isFalse);
-    expect(top.hasPortWithSubstring('orange'), isFalse);
-    expect(mid.hasPortWithSubstring('apple'), isFalse);
-    expect(mid.hasPortWithSubstring('orange'), isFalse);
+    print(top.generateSynth());
+
+    expect(top.hasPortWithSubstring('fc'), isFalse);
+    expect(top.hasPortWithSubstring('fp'), isFalse);
+    expect(mid.hasPortWithSubstring('fc'), isFalse);
+    expect(mid.hasPortWithSubstring('fp'), isFalse);
+
+    expect(top.hasPortWithSubstring('apple'), isTrue);
+    expect(top.hasPortWithSubstring('orange'), isTrue);
+    expect(mid.hasPortWithSubstring('apple'), isTrue);
+    expect(mid.hasPortWithSubstring('orange'), isTrue);
+  });
+
+  test('connectInterfaces with exceptPorts', () async {
+    // - BridgeModule.connectInterfaces
+    //   -> passes correctly to InterfaceReference.connectUpTo, connectDownTo
+
+    final top = BridgeModule('top');
+    final leaf1 = LM1(instName: 'leaf1');
+    final leaf2 = LM2(instName: 'leaf2');
+    final mid1 = BridgeModule('mid1')..addSubModule(leaf1);
+    final mid2 = BridgeModule('mid2')..addSubModule(leaf2);
+    top
+      ..addSubModule(mid1)
+      ..addSubModule(mid2)
+      ..pullUpPort(leaf2.port('dummy'));
+
+    connectInterfaces(leaf1.interface('intf1'), leaf2.interface('intf1'),
+        exceptPorts: {'fc', 'fp'});
+
+    await top.build();
+
+    expect(mid1.hasPortWithSubstring('fc'), isFalse);
+    expect(mid1.hasPortWithSubstring('fp'), isFalse);
+    expect(mid2.hasPortWithSubstring('fc'), isFalse);
+    expect(mid2.hasPortWithSubstring('fp'), isFalse);
+    expect(top.hasPortWithSubstring('fc'), isFalse);
+    expect(top.hasPortWithSubstring('fp'), isFalse);
+
+    expect(mid1.hasPortWithSubstring('apple'), isTrue);
+    expect(mid1.hasPortWithSubstring('orange'), isTrue);
+    expect(mid2.hasPortWithSubstring('apple'), isTrue);
+    expect(mid2.hasPortWithSubstring('orange'), isTrue);
   });
 }
 
