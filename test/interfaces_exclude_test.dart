@@ -1,8 +1,8 @@
 // Copyright (C) 2024-2025 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 //
-// std_interfaces_exclude_test.dart
-// Unit tests for exclusion functionality while connecting std interfaces.
+// interfaces_exclude_test.dart
+// Unit tests for exclusion functionality while connecting interfaces.
 //
 // 2024
 // Authors:
@@ -31,8 +31,8 @@ class IntfA extends PairInterface {
 
 class LM1 extends BridgeModule {
   late int paramA;
-  LM1({this.paramA = 1, String instName = 'lm1'})
-      : super('lm1', name: instName) {
+  LM1({this.paramA = 8, String instName = 'lm1'})
+      : super('lm1', name: instName, reserveDefinitionName: false) {
     final inf1 = addInterface(
       IntfA(paramA: paramA),
       name: 'intf1',
@@ -56,8 +56,8 @@ class LM1 extends BridgeModule {
 
 class LM2 extends BridgeModule {
   late int paramA;
-  LM2({this.paramA = 1, String instName = 'lm2'})
-      : super('lm2', name: instName) {
+  LM2({this.paramA = 8, String instName = 'lm2'})
+      : super('lm2', name: instName, reserveDefinitionName: false) {
     final inf1 = addInterface(
       IntfA(paramA: paramA),
       name: 'intf1',
@@ -87,8 +87,8 @@ void main() {
     top
       ..addSubModule(par1)
       ..addSubModule(par2);
-    final lm1Inst = par1.addSubModule(LM1(paramA: 8));
-    final lm2Inst = par2.addSubModule(LM2(paramA: 8));
+    final lm1Inst = par1.addSubModule(LM1());
+    final lm2Inst = par2.addSubModule(LM2());
     connectInterfaces(lm2Inst.interface('intf1'), lm1Inst.interface('intf1'),
         exceptPorts: {'apple', 'fc', 'fp'});
     top.pullUpPort(lm2Inst.port('dummy'));
@@ -104,8 +104,8 @@ void main() {
     top
       ..addSubModule(par1)
       ..addSubModule(par2);
-    final lm1Inst = par1.addSubModule(LM1(paramA: 8));
-    final lm2Inst = par2.addSubModule(LM2(paramA: 8));
+    final lm1Inst = par1.addSubModule(LM1());
+    final lm2Inst = par2.addSubModule(LM2());
     try {
       connectInterfaces(lm2Inst.interface('intf1'), lm1Inst.interface('intf1'),
           exceptPorts: {'apple', 'fc'});
@@ -130,8 +130,8 @@ void main() {
     top
       ..addSubModule(par1)
       ..addSubModule(par2);
-    final lm1Inst = par1.addSubModule(LM1(paramA: 8));
-    final lm2Inst = par2.addSubModule(LM2(paramA: 8));
+    final lm1Inst = par1.addSubModule(LM1());
+    final lm2Inst = par2.addSubModule(LM2());
     try {
       connectInterfaces(lm2Inst.interface('intf1'), lm1Inst.interface('intf1'));
       top.pullUpPort(lm2Inst.port('dummy'));
@@ -150,4 +150,46 @@ void main() {
               ' {fc} on driver : {fp} on receiver'));
     }
   });
+
+  //Test plan:
+  // - BridgeModule.pullUpInterface
+  //   -> passes correctly to connectUpTo, punchUpTo
+  // - connectInterfaces
+  //   -> passes correctly to pullUpInterface, _pullUpInterfaceAndConnect
+  // - InterfaceReference
+  //   - punchUpTo
+  //     -> _connectAllPortMaps, cloneExcept, connectUpTo
+  //   - punchDownTo
+  //     -> _connectAllPortMaps, cloneExcept, connectDownTo
+  //   - connectUpTo
+  //     -> _connectAllPortMaps (both), receive and drive other (both)
+  //   - connectDownTo
+  //     -> _connectAllPortMaps (both), receive and drive other (both)
+  //   - connectTo
+  //     -> _connectAllPortMaps (both), receive and drive other (both)
+
+  test('pullUpInterface with exceptPorts', () async {
+    final top = BridgeModule('top');
+    final leaf = LM1();
+    final mid = BridgeModule('mid')..addSubModule(leaf);
+    top
+      ..addSubModule(mid)
+      ..pullUpInterface(leaf.interface('intf1'),
+          exceptPorts: {'orange', 'apple'});
+
+    await top.build();
+
+    expect(top.hasPortWithSubstring('apple'), isFalse);
+    expect(top.hasPortWithSubstring('orange'), isFalse);
+    expect(mid.hasPortWithSubstring('apple'), isFalse);
+    expect(mid.hasPortWithSubstring('orange'), isFalse);
+  });
+}
+
+extension on BridgeModule {
+  /// Indicates if any port in this module contains [subName] as a substring.
+  bool hasPortWithSubstring(String subName) =>
+      inputs.keys.any((element) => element.contains(subName)) ||
+      outputs.keys.any((element) => element.contains(subName)) ||
+      inOuts.keys.any((element) => element.contains(subName));
 }

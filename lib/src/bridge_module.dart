@@ -613,7 +613,7 @@ class BridgeModule extends Module with SystemVerilog {
     }
 
     if (topToConnect != null) {
-      newIntf.connectUpTo(topToConnect);
+      newIntf.connectUpTo(topToConnect, exceptPorts: exceptPorts);
 
       for (final createdInterface in createdInterfaces) {
         for (final portName in interfaceInputPortNames) {
