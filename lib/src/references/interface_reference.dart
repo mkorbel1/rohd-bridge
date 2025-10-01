@@ -113,6 +113,8 @@ class InterfaceReference<InterfaceType extends PairInterface>
     }
   }
 
+  //TODO: also test portuniquify?
+
   /// Creates an [internalInterface] on this [InterfaceReference], connecting
   /// ports to existing [portMaps] when they exist, and creating new ports
   /// otherwise.
@@ -373,10 +375,13 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// hierarchy.
   ///
   /// The [subModule] must be a child of this interface's [module].
-  InterfaceReference punchDownTo(BridgeModule subModule,
-      {String? newIntfName,
-      bool allowNameUniquification = false,
-      Set<String>? exceptPorts}) {
+  InterfaceReference punchDownTo(
+    BridgeModule subModule, {
+    String? newIntfName,
+    bool allowNameUniquification = false,
+    Set<String>? exceptPorts,
+    String Function(String logical)? portUniquify,
+  }) {
     // TODO(mkorbel1): remove restriction that it must be adjacent (https://github.com/intel/rohd-bridge/issues/13)
     if (subModule.parent != module) {
       throw RohdBridgeException(
@@ -390,6 +395,7 @@ class InterfaceReference<InterfaceType extends PairInterface>
       name: newIntfName ?? name,
       role: role,
       allowNameUniquification: allowNameUniquification,
+      portUniquify: portUniquify,
     );
 
     connectDownTo(newRef, exceptPorts: exceptPorts);
@@ -567,6 +573,6 @@ extension _ExceptPairInterfaceExtensions on PairInterface {
       getPorts({tag})
           .entries
           .where((e) => exceptPorts == null || !exceptPorts.contains(e.key))
-          .map((e) => e.value.clone(name: e.key))
+          .map((e) => e.value.clone())
           .toList(growable: false);
 }

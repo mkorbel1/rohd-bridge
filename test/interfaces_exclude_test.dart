@@ -150,13 +150,7 @@ void main() {
   });
 
   // TODO Test plan:
-  // - connectInterfaces
-  //   -> passes correctly to pullUpInterface, _pullUpInterfaceAndConnect
   // - InterfaceReference
-  //   - punchUpTo
-  //     -> _connectAllPortMaps, cloneExcept, connectUpTo
-  //   - punchDownTo
-  //     -> _connectAllPortMaps, cloneExcept, connectDownTo
   //   - connectUpTo
   //     -> _connectAllPortMaps (both), receive and drive other (both)
   //   - connectDownTo
@@ -191,7 +185,7 @@ void main() {
   });
 
   test('connectInterfaces with exceptPorts', () async {
-    // - BridgeModule.connectInterfaces
+    // - connectInterfaces
     //   -> passes correctly to InterfaceReference.connectUpTo, connectDownTo
 
     final top = BridgeModule('top');
@@ -220,6 +214,50 @@ void main() {
     expect(mid1.hasPortWithSubstring('orange'), isTrue);
     expect(mid2.hasPortWithSubstring('apple'), isTrue);
     expect(mid2.hasPortWithSubstring('orange'), isTrue);
+  });
+
+  test('punchUpTo with exceptPorts', () async {
+    //   - InterfaceReference.punchUpTo
+    //     -> _connectAllPortMaps, cloneExcept, connectUpTo
+
+    final top = BridgeModule('top');
+    final leaf = LM1();
+    top.addSubModule(leaf);
+
+    leaf.interface('intf1').punchUpTo(top, exceptPorts: {'fp', 'fc'});
+
+    await top.build();
+
+    expect(top.hasPortWithSubstring('fp'), isFalse);
+    expect(top.hasPortWithSubstring('fc'), isFalse);
+
+    expect(top.hasPortWithSubstring('orange'), isTrue);
+    expect(top.hasPortWithSubstring('apple'), isTrue);
+
+    expect(top.interface('intf1').interface,
+        isNot(equals(leaf.interface('intf1').interface)));
+  });
+
+  test('punchDownTo with exceptPorts', () async {
+    //   - InterfaceReference.punchDownTo
+    //     -> _connectAllPortMaps, cloneExcept, connectDownTo
+
+    final top = LM1();
+    final leaf = BridgeModule('leaf');
+    top.addSubModule(leaf);
+
+    top.interface('intf1').punchDownTo(leaf, exceptPorts: {'fp', 'fc'});
+
+    await top.build();
+
+    expect(leaf.hasPortWithSubstring('fp'), isFalse);
+    expect(leaf.hasPortWithSubstring('fc'), isFalse);
+
+    expect(leaf.hasPortWithSubstring('orange'), isTrue);
+    expect(leaf.hasPortWithSubstring('apple'), isTrue);
+
+    expect(top.interface('intf1').interface,
+        isNot(equals(leaf.interface('intf1').interface)));
   });
 }
 

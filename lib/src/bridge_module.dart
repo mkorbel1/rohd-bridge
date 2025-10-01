@@ -483,7 +483,7 @@ class BridgeModule extends Module with SystemVerilog {
   /// Throws an [Exception] if no interface with the given [name] exists.
   InterfaceReference interface(String name) =>
       interfaces[name] ??
-      (throw RohdBridgeException('Interface $name not found'));
+      (throw RohdBridgeException('Interface $name not found on $this'));
 
   /// Creates a hierarchical connection by pulling an interface up from a
   /// submodule.
