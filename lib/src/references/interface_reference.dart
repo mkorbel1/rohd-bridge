@@ -505,6 +505,7 @@ class InterfaceReference<InterfaceType extends PairInterface>
   }
 }
 
+/// Extensions on [PairInterface] to handle `exceptPorts` functionality.
 extension _ExceptPairInterfaceExtensions on PairInterface {
   /// Performs the same operation as [driveOther], but excludes ports listed in
   /// [exceptPorts].
