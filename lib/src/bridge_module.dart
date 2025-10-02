@@ -483,7 +483,7 @@ class BridgeModule extends Module with SystemVerilog {
   /// Throws an [Exception] if no interface with the given [name] exists.
   InterfaceReference interface(String name) =>
       interfaces[name] ??
-      (throw RohdBridgeException('Interface $name not found'));
+      (throw RohdBridgeException('Interface $name not found on $this'));
 
   /// Creates a hierarchical connection by pulling an interface up from a
   /// submodule.
@@ -613,7 +613,7 @@ class BridgeModule extends Module with SystemVerilog {
     }
 
     if (topToConnect != null) {
-      newIntf.connectUpTo(topToConnect);
+      newIntf.connectUpTo(topToConnect, exceptPorts: exceptPorts);
 
       for (final createdInterface in createdInterfaces) {
         for (final portName in interfaceInputPortNames) {
@@ -1289,7 +1289,7 @@ void connectInterfaces(
   String? intf2PathNewName,
   bool allowIntf1PathUniquification = true,
   bool allowIntf2PathUniquification = true,
-  Set<String> exceptPorts = const {},
+  Set<String>? exceptPorts,
   // TODO(mkorbel): finish these,
   //  possibly wont be needed for connectInterfaces
   //  String Function(String logical, String? physical)? portUniquify1,
@@ -1320,7 +1320,7 @@ void connectInterfaces(
     }
     final unusedPortsOnDriver = intf1.getUnmappedInterfacePorts();
     final unusedPortOnReceiver = intf2.getUnmappedInterfacePorts();
-    if (exceptPorts.isNotEmpty) {
+    if (exceptPorts != null && exceptPorts.isNotEmpty) {
       unusedPortsOnDriver.removeWhere(exceptPorts.contains);
       unusedPortOnReceiver.removeWhere(exceptPorts.contains);
     }

@@ -1,7 +1,7 @@
 // Copyright (C) 2024-2025 Intel Corporation
 // SPDX-License-Identifier: BSD-3-Clause
 //
-// std_interfaces_test.dart
+// bridge_interface_test.dart
 // Unit tests for standard interface JSON parsing.
 //
 // 2024
@@ -15,7 +15,7 @@ import 'package:rohd_bridge/src/bridge_interface.dart';
 import 'package:test/test.dart';
 
 void main() async {
-  test('Custom Interaface ofJson', () async {
+  test('Bridge Interface simple', () async {
     final portsFromConsumer = {'a': 1, 'b': 2, 'c': 3};
     final portsFromProvider = {'d': 4, 'e': 5, 'f': 6};
     final intf = BridgeInterface(

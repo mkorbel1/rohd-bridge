@@ -223,7 +223,8 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// - [portUniquify]: Function to generate unique port names
   ///
   /// If [exceptPorts] is provided, the resulting interface will exclude those
-  /// ports. Otherwise, the new interface will be of the same type as this one.
+  /// ports (and thus not be of the same type). Otherwise, the new interface
+  /// will be of the same type as this one.
   InterfaceReference punchUpTo(
     BridgeModule newModule, {
     String? newIntfName,
@@ -240,66 +241,17 @@ class InterfaceReference<InterfaceType extends PairInterface>
     _connectAllPortMaps(exceptPorts: exceptPorts);
 
     final newRef = newModule.addInterface(
-      _clonePairInterface(interface, exceptPorts: exceptPorts),
+      interface._cloneExcept(exceptPorts: exceptPorts),
       name: newIntfName ?? name,
       role: role,
       allowNameUniquification: allowNameUniquification,
       portUniquify: portUniquify,
     );
 
-    connectUpTo(newRef);
+    connectUpTo(newRef, exceptPorts: exceptPorts);
 
     return newRef;
   }
-
-  /// Creates a copy of an interface with optional port exclusions.
-  ///
-  /// Returns a new [PairInterface] that contains all the same ports as the
-  /// [original] interface, except for those listed in [exceptPorts]. If
-  /// [exceptPorts] is null or empty, returns a complete clone.
-  ///
-  /// This is used internally when creating interface variants that exclude
-  /// certain ports during hierarchical interface operations.
-  static PairInterface _clonePairInterface(PairInterface original,
-      {Set<String>? exceptPorts}) {
-    if (exceptPorts == null || exceptPorts.isEmpty) {
-      return original.clone();
-    }
-
-    return PairInterface(
-      portsFromConsumer: _getMatchPorts(original, PairDirection.fromConsumer,
-              exceptPorts: exceptPorts)
-          .toList(),
-      portsFromProvider: _getMatchPorts(original, PairDirection.fromProvider,
-              exceptPorts: exceptPorts)
-          .toList(),
-      sharedInputPorts: _getMatchPorts(original, PairDirection.sharedInputs,
-              exceptPorts: exceptPorts)
-          .toList(),
-      commonInOutPorts: _getMatchPorts(original, PairDirection.commonInOuts,
-              exceptPorts: exceptPorts)
-          .toList(),
-      modify: original.modify,
-    );
-  }
-
-  /// Extracts ports with a specific direction tag from an interface.
-  ///
-  /// Returns a list of [Logic] ports from the [interface] that are tagged with
-  /// the specified [tag] direction, excluding any ports listed in
-  /// [exceptPorts]. Creates appropriate port instances ([Logic], [LogicArray],
-  /// or [LogicNet]) based on the original port types.
-  ///
-  /// This is a utility method for interface cloning operations.
-  static List<Logic> _getMatchPorts(
-          Interface<PairDirection> interface, PairDirection tag,
-          {Set<String>? exceptPorts}) =>
-      interface
-          .getPorts({tag})
-          .entries
-          .where((e) => exceptPorts == null || !exceptPorts.contains(e.key))
-          .map((e) => e.value.clone(name: e.key))
-          .toList(growable: false);
 
   /// Establishes a hierarchical "upward" connection to a parent interface.
   ///
@@ -312,7 +264,7 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// - Shared and common ports follow interface-specific rules
   ///
   /// The [other] must be on this reference's [module]'s parent.
-  void connectUpTo(InterfaceReference other) {
+  void connectUpTo(InterfaceReference other, {Set<String>? exceptPorts}) {
     // TODO(mkorbel1): remove restriction that it must be adjacent (https://github.com/intel/rohd-bridge/issues/13)
     if (module.parent != other.module) {
       throw RohdBridgeException(
@@ -324,30 +276,42 @@ class InterfaceReference<InterfaceType extends PairInterface>
       other._introduceInternalInterface();
     }
 
-    _connectAllPortMaps(exceptPorts: null);
-    other._connectAllPortMaps(exceptPorts: null);
+    _connectAllPortMaps(exceptPorts: exceptPorts);
+    other._connectAllPortMaps(exceptPorts: exceptPorts);
 
     switch (role) {
       case (PairRole.provider):
         other.internalInterface!
-          ..receiveOther(interface, const [
-            PairDirection.fromProvider,
-          ])
-          ..driveOther(interface, const [
-            PairDirection.fromConsumer,
-            PairDirection.sharedInputs,
-            PairDirection.commonInOuts,
-          ]);
+          .._receiveOtherExcept(
+              interface,
+              const [
+                PairDirection.fromProvider,
+              ],
+              exceptPorts: exceptPorts)
+          .._driveOtherExcept(
+              interface,
+              const [
+                PairDirection.fromConsumer,
+                PairDirection.sharedInputs,
+                PairDirection.commonInOuts,
+              ],
+              exceptPorts: exceptPorts);
       case (PairRole.consumer):
         other.internalInterface!
-          ..receiveOther(interface, const [
-            PairDirection.fromConsumer,
-          ])
-          ..driveOther(interface, const [
-            PairDirection.fromProvider,
-            PairDirection.sharedInputs,
-            PairDirection.commonInOuts,
-          ]);
+          .._receiveOtherExcept(
+              interface,
+              const [
+                PairDirection.fromConsumer,
+              ],
+              exceptPorts: exceptPorts)
+          .._driveOtherExcept(
+              interface,
+              const [
+                PairDirection.fromProvider,
+                PairDirection.sharedInputs,
+                PairDirection.commonInOuts,
+              ],
+              exceptPorts: exceptPorts);
     }
   }
 
@@ -362,8 +326,7 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// rather than using bulk interface connection methods.
   ///
   /// Throws an exception if both interfaces have the same role.
-  void connectTo(InterfaceReference other,
-      {Set<String> exceptPorts = const {}}) {
+  void connectTo(InterfaceReference other, {Set<String>? exceptPorts}) {
     // TODO(mkorbel1): remove restriction that it must be adjacent (https://github.com/intel/rohd-bridge/issues/13)
     if (other.module.parent != module.parent) {
       throw RohdBridgeException('Both interfaces must be on modules that share'
@@ -380,33 +343,20 @@ class InterfaceReference<InterfaceType extends PairInterface>
     final provider = role == PairRole.provider ? this : other;
     final consumer = role == PairRole.consumer ? this : other;
 
-    if (exceptPorts.isNotEmpty) {
-      provider.interface.getPorts([
-        PairDirection.fromProvider,
-        PairDirection.commonInOuts,
-      ]).forEach((portName, thisPort) {
-        if (!exceptPorts.contains(portName)) {
-          consumer.interface.port(portName) <= thisPort;
-        }
-      });
+    provider.interface._driveOtherExcept(
+        consumer.interface,
+        [
+          PairDirection.fromProvider,
+          PairDirection.commonInOuts,
+        ],
+        exceptPorts: exceptPorts);
 
-      consumer.interface.getPorts([
-        PairDirection.fromConsumer,
-      ]).forEach((portName, thisPort) {
-        if (!exceptPorts.contains(portName)) {
-          provider.interface.port(portName) <= thisPort;
-        }
-      });
-    } else {
-      provider.interface.driveOther(consumer.interface, [
-        PairDirection.fromProvider,
-        PairDirection.commonInOuts,
-      ]);
-
-      consumer.interface.driveOther(provider.interface, [
-        PairDirection.fromConsumer,
-      ]);
-    }
+    consumer.interface._driveOtherExcept(
+        provider.interface,
+        [
+          PairDirection.fromConsumer,
+        ],
+        exceptPorts: exceptPorts);
   }
 
   /// Creates a copy of this interface in a submodule.
@@ -423,24 +373,30 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// hierarchy.
   ///
   /// The [subModule] must be a child of this interface's [module].
-  InterfaceReference punchDownTo(BridgeModule subModule,
-      {String? newIntfName, bool allowNameUniquification = false}) {
+  InterfaceReference punchDownTo(
+    BridgeModule subModule, {
+    String? newIntfName,
+    bool allowNameUniquification = false,
+    Set<String>? exceptPorts,
+    String Function(String logical)? portUniquify,
+  }) {
     // TODO(mkorbel1): remove restriction that it must be adjacent (https://github.com/intel/rohd-bridge/issues/13)
     if (subModule.parent != module) {
       throw RohdBridgeException(
           'The subModule must be a direct child of this module.');
     }
 
-    _connectAllPortMaps(exceptPorts: null);
+    _connectAllPortMaps(exceptPorts: exceptPorts);
 
     final newRef = subModule.addInterface(
-      interface,
+      interface._cloneExcept(exceptPorts: exceptPorts),
       name: newIntfName ?? name,
       role: role,
       allowNameUniquification: allowNameUniquification,
+      portUniquify: portUniquify,
     );
 
-    connectDownTo(newRef);
+    connectDownTo(newRef, exceptPorts: exceptPorts);
 
     return newRef;
   }
@@ -452,7 +408,7 @@ class InterfaceReference<InterfaceType extends PairInterface>
   /// the interface role, with signals flowing from parent to child.
   ///
   /// The [other] must be on a sub-module of this [module].
-  void connectDownTo(InterfaceReference other) {
+  void connectDownTo(InterfaceReference other, {Set<String>? exceptPorts}) {
     // TODO(mkorbel1): remove restriction that it must be adjacent (https://github.com/intel/rohd-bridge/issues/13)
     if (other.module.parent != module) {
       throw RohdBridgeException(
@@ -464,30 +420,42 @@ class InterfaceReference<InterfaceType extends PairInterface>
       _introduceInternalInterface();
     }
 
-    _connectAllPortMaps(exceptPorts: null);
-    other._connectAllPortMaps(exceptPorts: null);
+    _connectAllPortMaps(exceptPorts: exceptPorts);
+    other._connectAllPortMaps(exceptPorts: exceptPorts);
 
     switch (role) {
       case (PairRole.provider):
         internalInterface!
-          ..driveOther(other.interface, const [
-            PairDirection.fromConsumer,
-            PairDirection.sharedInputs,
-            PairDirection.commonInOuts,
-          ])
-          ..receiveOther(other.interface, const [
-            PairDirection.fromProvider,
-          ]);
+          .._driveOtherExcept(
+              other.interface,
+              const [
+                PairDirection.fromConsumer,
+                PairDirection.sharedInputs,
+                PairDirection.commonInOuts,
+              ],
+              exceptPorts: exceptPorts)
+          .._receiveOtherExcept(
+              other.interface,
+              const [
+                PairDirection.fromProvider,
+              ],
+              exceptPorts: exceptPorts);
       case (PairRole.consumer):
         internalInterface!
-          ..driveOther(other.interface, const [
-            PairDirection.fromProvider,
-            PairDirection.sharedInputs,
-            PairDirection.commonInOuts,
-          ])
-          ..receiveOther(other.interface, const [
-            PairDirection.fromConsumer,
-          ]);
+          .._driveOtherExcept(
+              other.interface,
+              const [
+                PairDirection.fromProvider,
+                PairDirection.sharedInputs,
+                PairDirection.commonInOuts,
+              ],
+              exceptPorts: exceptPorts)
+          .._receiveOtherExcept(
+              other.interface,
+              const [
+                PairDirection.fromConsumer,
+              ],
+              exceptPorts: exceptPorts);
     }
   }
 
@@ -535,4 +503,75 @@ class InterfaceReference<InterfaceType extends PairInterface>
 
     return unmappedPorts;
   }
+}
+
+/// Extensions on [PairInterface] to handle `exceptPorts` functionality.
+extension _ExceptPairInterfaceExtensions on PairInterface {
+  /// Performs the same operation as [driveOther], but excludes ports listed in
+  /// [exceptPorts].
+  void _driveOtherExcept(PairInterface other, Iterable<PairDirection> tags,
+      {required Set<String>? exceptPorts}) {
+    getPorts(tags).forEach((portName, thisPort) {
+      if (exceptPorts == null || !exceptPorts.contains(portName)) {
+        other.port(portName) <= thisPort;
+      }
+    });
+  }
+
+  /// Performs the same operation as [receiveOther], but excludes ports listed
+  /// in [exceptPorts].
+  void _receiveOtherExcept(PairInterface other, Iterable<PairDirection> tags,
+      {required Set<String>? exceptPorts}) {
+    getPorts(tags).forEach((portName, thisPort) {
+      if (exceptPorts == null || !exceptPorts.contains(portName)) {
+        thisPort <= other.port(portName);
+      }
+    });
+  }
+
+  /// Creates a copy of an interface with optional port exclusions.
+  ///
+  /// Returns a new [PairInterface] that contains all the same ports as the
+  /// `this` interface, except for those listed in [exceptPorts]. If
+  /// [exceptPorts] is null or empty, returns a complete clone.
+  ///
+  /// This is used internally when creating interface variants that exclude
+  /// certain ports during hierarchical interface operations.
+  PairInterface _cloneExcept({required Set<String>? exceptPorts}) {
+    if (exceptPorts == null || exceptPorts.isEmpty) {
+      return clone();
+    }
+
+    return PairInterface(
+      portsFromConsumer: _getMatchPortsExcept(PairDirection.fromConsumer,
+              exceptPorts: exceptPorts)
+          .toList(),
+      portsFromProvider: _getMatchPortsExcept(PairDirection.fromProvider,
+              exceptPorts: exceptPorts)
+          .toList(),
+      sharedInputPorts: _getMatchPortsExcept(PairDirection.sharedInputs,
+              exceptPorts: exceptPorts)
+          .toList(),
+      commonInOutPorts: _getMatchPortsExcept(PairDirection.commonInOuts,
+              exceptPorts: exceptPorts)
+          .toList(),
+      modify: modify,
+    );
+  }
+
+  /// Extracts ports with a specific direction tag from an interface.
+  ///
+  /// Returns a list of [Logic] ports from `this` that are tagged with
+  /// the specified [tag] direction, excluding any ports listed in
+  /// [exceptPorts]. Creates appropriate port instances ([Logic], [LogicArray],
+  /// or [LogicNet]) based on the original port types.
+  ///
+  /// This is a utility method for interface cloning operations.
+  List<Logic> _getMatchPortsExcept(PairDirection tag,
+          {required Set<String>? exceptPorts}) =>
+      getPorts({tag})
+          .entries
+          .where((e) => exceptPorts == null || !exceptPorts.contains(e.key))
+          .map((e) => e.value.clone())
+          .toList(growable: false);
 }
