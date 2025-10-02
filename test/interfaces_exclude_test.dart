@@ -149,15 +149,6 @@ void main() {
     }
   });
 
-  // TODO Test plan:
-  // - InterfaceReference
-  //   - connectUpTo
-  //     -> _connectAllPortMaps (both), receive and drive other (both)
-  //   - connectDownTo
-  //     -> _connectAllPortMaps (both), receive and drive other (both)
-  //   - connectTo
-  //     -> _connectAllPortMaps (both), receive and drive other (both)
-
   test('pullUpInterface with exceptPorts', () async {
     // - BridgeModule.pullUpInterface
     //   -> passes correctly to connectUpTo, punchUpTo
@@ -170,8 +161,6 @@ void main() {
       ..pullUpInterface(leaf.interface('intf1'), exceptPorts: {'fc', 'fp'});
 
     await top.build();
-
-    print(top.generateSynth());
 
     expect(top.hasPortWithSubstring('fc'), isFalse);
     expect(top.hasPortWithSubstring('fp'), isFalse);
@@ -258,6 +247,82 @@ void main() {
 
     expect(top.interface('intf1').interface,
         isNot(equals(leaf.interface('intf1').interface)));
+  });
+
+  test('connectUpTo with exceptPorts', () async {
+    //   - InterfaceReference.connectUpTo
+    //     -> _connectAllPortMaps (both), receive and drive other (both)
+
+    final top = LM1();
+    final leaf = LM1();
+    top.addSubModule(leaf);
+
+    leaf
+        .interface('intf1')
+        .connectUpTo(top.interface('intf1'), exceptPorts: {'fp', 'fc'});
+
+    await top.build();
+
+    top.input('apple').put(0xA);
+    leaf.output('orange').put(0x5);
+
+    expect(top.output('orange').value.toInt(), 0x5);
+    expect(leaf.input('apple').value.toInt(), 0xA);
+
+    leaf.output('fc').put(0xFF);
+    expect(top.output('fc').value.isFloating, isTrue);
+  });
+
+  test('connectDownTo with exceptPorts', () async {
+    //   - InterfaceReference.connectDownTo
+    //     -> _connectAllPortMaps (both), receive and drive other (both)
+
+    final top = LM1();
+    final leaf = LM1();
+    top.addSubModule(leaf);
+
+    top
+        .interface('intf1')
+        .connectDownTo(leaf.interface('intf1'), exceptPorts: {'fp', 'fc'});
+
+    await top.build();
+
+    top.input('apple').put(0xA);
+    leaf.output('orange').put(0x5);
+
+    expect(top.output('orange').value.toInt(), 0x5);
+    expect(leaf.input('apple').value.toInt(), 0xA);
+
+    leaf.output('fc').put(0xFF);
+    expect(top.output('fc').value.isFloating, isTrue);
+  });
+
+  test('connectTo with exceptPorts', () async {
+    //   - InterfaceReference.connectTo
+    //     -> _connectAllPortMaps (both), receive and drive other (both)
+
+    final top = BridgeModule('top');
+    final leaf1 = LM1();
+    final leaf2 = LM2();
+    top
+      ..addSubModule(leaf1)
+      ..addSubModule(leaf2);
+
+    leaf1
+        .interface('intf1')
+        .connectTo(leaf2.interface('intf1'), exceptPorts: {'fp', 'fc'});
+
+    top
+      ..pullUpPort(leaf2.port('dummy'))
+      ..pullUpPort(leaf1.port('dummy'));
+
+    await top.build();
+
+    leaf2.output('apple').put(0xA);
+    leaf1.output('orange').put(0x5);
+
+    expect(leaf1.input('apple').value.toInt(), 0xA);
+    expect(leaf2.input('orange').value.toInt(), 0x5);
   });
 }
 

@@ -113,8 +113,6 @@ class InterfaceReference<InterfaceType extends PairInterface>
     }
   }
 
-  //TODO: also test portuniquify?
-
   /// Creates an [internalInterface] on this [InterfaceReference], connecting
   /// ports to existing [portMaps] when they exist, and creating new ports
   /// otherwise.
