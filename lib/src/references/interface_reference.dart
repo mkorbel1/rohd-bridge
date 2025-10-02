@@ -511,7 +511,7 @@ extension _ExceptPairInterfaceExtensions on PairInterface {
   void _driveOtherExcept(PairInterface other, Iterable<PairDirection> tags,
       {required Set<String>? exceptPorts}) {
     getPorts(tags).forEach((portName, thisPort) {
-      if (exceptPorts != null && !exceptPorts.contains(portName)) {
+      if (exceptPorts == null || !exceptPorts.contains(portName)) {
         other.port(portName) <= thisPort;
       }
     });
@@ -522,7 +522,7 @@ extension _ExceptPairInterfaceExtensions on PairInterface {
   void _receiveOtherExcept(PairInterface other, Iterable<PairDirection> tags,
       {required Set<String>? exceptPorts}) {
     getPorts(tags).forEach((portName, thisPort) {
-      if (exceptPorts != null && !exceptPorts.contains(portName)) {
+      if (exceptPorts == null || !exceptPorts.contains(portName)) {
         thisPort <= other.port(portName);
       }
     });
