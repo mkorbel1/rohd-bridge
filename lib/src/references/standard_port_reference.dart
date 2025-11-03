@@ -86,7 +86,9 @@ class StandardPortReference extends PortReference {
     if (port is LogicArray) {
       final portArr = port as LogicArray;
       newModule.createArrayPort(newPortName, direction,
-          dimensions: portArr.dimensions, elementWidth: portArr.elementWidth);
+          dimensions: portArr.dimensions,
+          elementWidth: portArr.elementWidth,
+          numUnpackedDimensions: portArr.numUnpackedDimensions);
     } else {
       newModule.createPort(newPortName, direction, width: port.width);
     }

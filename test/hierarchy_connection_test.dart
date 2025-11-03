@@ -232,6 +232,52 @@ void main() {
     });
   });
 
+  group('pull up array port with unpacked dimensions', () {
+    test('standard port', () async {
+      final top = BridgeModule('top');
+      final child = BridgeModule('child');
+      final childPort = child.createArrayPort('arrayPort', PortDirection.input,
+          elementWidth: 8, numUnpackedDimensions: 1, dimensions: [4, 2]);
+      top.addSubModule(child);
+
+      final topPort = top.pullUpPort(childPort);
+
+      await top.build();
+
+      expect((topPort.port as LogicArray).numUnpackedDimensions, 1);
+    });
+
+    test('slice port whole dimension', () async {
+      final top = BridgeModule('top');
+      final child = BridgeModule('child')
+        ..createArrayPort('arrayPort', PortDirection.input,
+            elementWidth: 8, numUnpackedDimensions: 2, dimensions: [4, 2]);
+      top.addSubModule(child);
+
+      final slicePort = child.port('arrayPort[2]');
+      final topPort = top.pullUpPort(slicePort);
+
+      await top.build();
+
+      expect((topPort.port as LogicArray).numUnpackedDimensions, 1);
+    });
+
+    test('slice port portion', () async {
+      final top = BridgeModule('top');
+      final child = BridgeModule('child')
+        ..createArrayPort('arrayPort', PortDirection.input,
+            elementWidth: 8, numUnpackedDimensions: 2, dimensions: [4, 2]);
+      top.addSubModule(child);
+
+      final slicePort = child.port('arrayPort[2:1]');
+      final topPort = top.pullUpPort(slicePort);
+
+      await top.build();
+
+      expect((topPort.port as LogicArray).numUnpackedDimensions, 2);
+    });
+  });
+
   test('single bit to single-bit element through hierarchy', () async {
     final mod1 = BridgeModule('mod1')..addOutput('apple');
     final mod2 = BridgeModule('mod2')

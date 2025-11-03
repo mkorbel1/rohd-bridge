@@ -395,12 +395,21 @@ class SlicePortReference extends PortReference {
   /// logic signal.
   List<int>? get subsetDimensions => _elementWidthAndDimensions.dimensions;
 
+  /// The number of unpacked dimensions in the port subset, if applicable.
+  ///
+  /// Returns the count of unpacked dimensions after applying array indexing
+  /// and slicing operations. `null` if the result is a simple scalar logic
+  /// signal.
+  int? get subsetNumUnpackedDimensions =>
+      _elementWidthAndDimensions.numUnpackedDimensions;
+
   /// Cached calculation of element width and dimensions for the subset.
   ///
   /// This computes the effective width and dimensionality that results from
   /// applying the dimension access and slicing operations to the original port.
   late final _elementWidthAndDimensions = _getElementWidthAndDimensions();
-  ({int elementWidth, List<int>? dimensions}) _getElementWidthAndDimensions() {
+  ({int elementWidth, List<int>? dimensions, int? numUnpackedDimensions})
+      _getElementWidthAndDimensions() {
     var sig = port;
     int? leafIndex;
     if (dimensionAccess != null) {
@@ -418,17 +427,22 @@ class SlicePortReference extends PortReference {
 
     if (leafIndex != null) {
       assert(sig is! LogicArray, 'should not be an array');
-      return (elementWidth: 1, dimensions: null);
+      return (elementWidth: 1, dimensions: null, numUnpackedDimensions: null);
     } else if (hasSlicing) {
       final sliceWidth = sliceUpperIndex! - sliceLowerIndex! + 1;
       if (sig is LogicArray) {
         return (
           elementWidth: sig.elementWidth,
-          dimensions: List.of(sig.dimensions)..[0] = sliceWidth
+          dimensions: List.of(sig.dimensions)..[0] = sliceWidth,
+          numUnpackedDimensions: sig.numUnpackedDimensions
         );
       } else {
         // non-array, normal logic
-        return (elementWidth: sliceWidth, dimensions: null);
+        return (
+          elementWidth: sliceWidth,
+          dimensions: null,
+          numUnpackedDimensions: null
+        );
       }
     } else {
       if (sig is LogicArray) {
@@ -436,10 +450,15 @@ class SlicePortReference extends PortReference {
         return (
           elementWidth: sig.elementWidth,
           dimensions: sig.dimensions,
+          numUnpackedDimensions: sig.numUnpackedDimensions
         );
       } else {
         // non-array, normal logic
-        return (elementWidth: sig.width, dimensions: null);
+        return (
+          elementWidth: sig.width,
+          dimensions: null,
+          numUnpackedDimensions: null
+        );
       }
     }
   }
@@ -453,7 +472,9 @@ class SlicePortReference extends PortReference {
       newModule.createPort(newPortName, direction, width: subsetElementWidth);
     } else {
       newModule.createArrayPort(newPortName, direction,
-          dimensions: subsetDimensions!, elementWidth: subsetElementWidth);
+          dimensions: subsetDimensions!,
+          elementWidth: subsetElementWidth,
+          numUnpackedDimensions: subsetNumUnpackedDimensions!);
     }
 
     return PortReference.fromString(newModule, newPortName);
