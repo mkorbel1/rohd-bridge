@@ -190,7 +190,13 @@ class _ConnectionSliceTracking {
 
   /// Converts the [src] to a [PortReference].
   Reference toSrcRef() => src is Const
-      ? ConstReference(src.value, module: srcModule)
+      ? ConstReference(
+          src.value,
+
+          // use the `dstModule` since we haven't necessarily built yet and the
+          // source is a `Const`, not a port
+          module: dstModule,
+        )
       : PortReference.fromPort(src).slice(srcHighIndex, srcLowIndex);
 
   /// Converts the [dst] to a [PortReference].
