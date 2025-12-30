@@ -183,14 +183,22 @@ class _ConnectionSliceTracking {
   final List<int> dstDimensionAccess;
 
   /// The module of the [src].
-  BridgeModule get srcModule => src.parentModule! as BridgeModule;
+  BridgeModule get srcModule => (src is Const && src.parentModule == null)
+      ? throw RohdBridgeException('Const has no parent module pre-build.')
+      : src.parentModule! as BridgeModule;
 
   /// The module of the [dst].
   BridgeModule get dstModule => dst.parentModule! as BridgeModule;
 
   /// Converts the [src] to a [PortReference].
   Reference toSrcRef() => src is Const
-      ? ConstReference(src.value, module: srcModule)
+      ? ConstReference(
+          src.value,
+
+          // use the `dstModule` since we haven't necessarily built yet and the
+          // source is a `Const`, not a port
+          module: dstModule,
+        )
       : PortReference.fromPort(src).slice(srcHighIndex, srcLowIndex);
 
   /// Converts the [dst] to a [PortReference].

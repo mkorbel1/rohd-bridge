@@ -1111,4 +1111,36 @@ void main() {
             .value,
         LogicValue.ofString('11'));
   });
+
+  test('connection extraction with consts pre-build', () {
+    final top = BridgeModule('top');
+    final subMod = BridgeModule('subMod');
+    final myDst = subMod.createPort('myDst', PortDirection.input, width: 8);
+    top.addSubModule(subMod);
+
+    myDst.slice(4, 3).tieOff(value: 3);
+    top.pullUpPort(myDst.slice(6, 5));
+
+    final extractor = ConnectionExtractor([top, subMod]);
+
+    final connections = extractor.connections;
+    expect(connections.whereType<TieOffConnection>().length, 2);
+
+    expect(connections.whereType<TieOffConnection>().first.src.module, subMod);
+
+    expect(
+        connections
+            .whereType<TieOffConnection>()
+            .firstWhere((e) => e.dst.toString().contains('myDst[3]'))
+            .src
+            .value,
+        LogicValue.ofString('11'));
+    expect(
+        connections
+            .whereType<TieOffConnection>()
+            .firstWhere((e) => e.dst.toString().contains('myDst[4]'))
+            .src
+            .value,
+        LogicValue.ofString('11'));
+  });
 }
