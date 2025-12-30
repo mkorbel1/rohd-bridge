@@ -183,7 +183,9 @@ class _ConnectionSliceTracking {
   final List<int> dstDimensionAccess;
 
   /// The module of the [src].
-  BridgeModule get srcModule => src.parentModule! as BridgeModule;
+  BridgeModule get srcModule => (src is Const && src.parentModule == null)
+      ? throw RohdBridgeException('Const has no parent module pre-build.')
+      : src.parentModule! as BridgeModule;
 
   /// The module of the [dst].
   BridgeModule get dstModule => dst.parentModule! as BridgeModule;
