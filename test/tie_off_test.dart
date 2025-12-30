@@ -46,8 +46,8 @@ void main() {
       ..addInput('apple', null, width: 4)
       ..addOutput('banana', width: 4);
 
-    mod.port('apple').tieOff('01xz');
-    mod.port('banana').tieOff('01xz');
+    mod.port('apple').tieOff(value: '01xz');
+    mod.port('banana').tieOff(value: '01xz');
 
     expect(mod.input('apple').value, LogicValue.of('01xz'));
     expect(mod.output('banana').value, LogicValue.of('01xz'));
@@ -56,7 +56,7 @@ void main() {
   test('tieOff an output and verify RTL', () async {
     final mod = BridgeModule('mod')..addOutput('banana', width: 4);
 
-    mod.port('banana').tieOff('10xz');
+    mod.port('banana').tieOff(value: '10xz');
 
     final top = BridgeModule('top')
       ..addSubModule(mod)
@@ -67,5 +67,64 @@ void main() {
     expect(sv, contains("assign banana = 4'b10xz;"));
 
     expect(mod.output('banana').value, LogicValue.of('10xz'));
+  });
+
+  test('tieOff with fill', () {
+    final mod = BridgeModule('mod')
+      ..addInput('apple', null, width: 8)
+      ..addOutput('banana', width: 8);
+
+    mod.port('apple').tieOff(value: 1, fill: true);
+    mod.port('banana').tieOff(value: 1, fill: true);
+
+    expect(mod.input('apple').value, LogicValue.filled(8, LogicValue.one));
+    expect(mod.output('banana').value, LogicValue.filled(8, LogicValue.one));
+  });
+
+  test('tieOffInterface ties off inputs based on role', () {
+    final intf = PairInterface(
+      portsFromProvider: [Logic.port('fromProv', 4)],
+      portsFromConsumer: [Logic.port('fromCons', 4)],
+    );
+
+    final mod = BridgeModule('mod')
+      ..addInterface(intf, name: 'myIntf', role: PairRole.consumer);
+
+    mod.tieOffInterface(mod.interface('myIntf'), value: 5);
+
+    // Consumer receives from provider, so fromProv should be tied off
+    expect(mod.interface('myIntf').port('fromProv').portSubsetLogic.value,
+        LogicValue.of('0101'));
+    // fromCons is an output from consumer's perspective, not tied off
+    expect(mod.interface('myIntf').port('fromCons').portSubsetLogic.value,
+        LogicValue.filled(4, LogicValue.z));
+  });
+
+  test('tieOffInterface with fill', () {
+    final intf = PairInterface(
+      portsFromProvider: [Logic.port('fromProv', 8)],
+    );
+
+    final mod = BridgeModule('mod')
+      ..addInterface(intf, name: 'myIntf', role: PairRole.consumer);
+
+    mod.tieOffInterface(mod.interface('myIntf'), value: 1, fill: true);
+
+    expect(mod.interface('myIntf').port('fromProv').portSubsetLogic.value,
+        LogicValue.filled(8, LogicValue.one));
+  });
+
+  test('tieOffInterface defaults to 0', () {
+    final intf = PairInterface(
+      portsFromProvider: [Logic.port('fromProv', 8)],
+    );
+
+    final mod = BridgeModule('mod')
+      ..addInterface(intf, name: 'myIntf', role: PairRole.consumer);
+
+    mod.tieOffInterface(mod.interface('myIntf'));
+
+    expect(mod.interface('myIntf').port('fromProv').portSubsetLogic.value,
+        LogicValue.filled(8, LogicValue.zero));
   });
 }
