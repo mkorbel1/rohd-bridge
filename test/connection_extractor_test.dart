@@ -1143,7 +1143,7 @@ void main() {
             connection.hasPoint(src.port('dataOut')) &&
             connection.hasPoint(dst.port('dataIn')));
 
-    expect(tieOffConnection == adHocConnection, isFalse);
+    expect(tieOffConnection, isNot(equals(adHocConnection)));
   });
 
   test('connection extraction with consts pre-build', () {
