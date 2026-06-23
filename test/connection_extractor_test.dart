@@ -1113,6 +1113,39 @@ void main() {
         LogicValue.ofString('11'));
   });
 
+  test('connection equality between tie off and ad hoc is false', () async {
+    final top = BridgeModule('top');
+    final tiedOff = BridgeModule('tiedOff')
+      ..createPort('tiedInput', PortDirection.input)
+      ..createPort('tiedClk', PortDirection.input);
+    final src = BridgeModule('src')
+      ..createPort('dataOut', PortDirection.output)
+      ..createPort('srcClk', PortDirection.input);
+    final dst = BridgeModule('dst')..createPort('dataIn', PortDirection.input);
+    top
+      ..addSubModule(tiedOff)
+      ..addSubModule(src)
+      ..addSubModule(dst);
+
+    tiedOff.port('tiedClk').punchUpTo(top);
+    src.port('srcClk').punchUpTo(top);
+    tiedOff.port('tiedInput').tieOff(value: 1);
+    connectPorts(src.port('dataOut'), dst.port('dataIn'));
+
+    await top.build();
+
+    final extractor = ConnectionExtractor(top.subBridgeModules);
+    final tieOffConnection =
+        extractor.connections.whereType<TieOffConnection>().single;
+    final adHocConnection = extractor.connections
+        .whereType<AdHocConnection>()
+        .firstWhere((connection) =>
+            connection.hasPoint(src.port('dataOut')) &&
+            connection.hasPoint(dst.port('dataIn')));
+
+    expect(tieOffConnection == adHocConnection, isFalse);
+  });
+
   test('connection extraction with consts pre-build', () {
     final top = BridgeModule('top');
     final subMod = BridgeModule('subMod');
