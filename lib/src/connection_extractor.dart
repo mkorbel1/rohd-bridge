@@ -40,7 +40,7 @@ abstract class Connection<RefType extends Reference> {
   const Connection(this.point1, this.point2);
 
   /// Indicates whether [point] is one of the points in this connection.
-  bool hasPoint(RefType point) => point1 == point || point2 == point;
+  bool hasPoint(Reference point) => point1 == point || point2 == point;
 
   /// Indicates whether this connection involves the given [module] on either of
   /// its points.
@@ -61,7 +61,7 @@ abstract class Connection<RefType extends Reference> {
 
   @override
   bool operator ==(Object other) =>
-      other is Connection<RefType> &&
+      other is Connection<Reference> &&
       other.hasPoint(point1) &&
       other.hasPoint(point2);
 
