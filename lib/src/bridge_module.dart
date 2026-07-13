@@ -995,13 +995,14 @@ class BridgeModule extends Module with SystemVerilog {
     final filelistContents = StringBuffer();
     logger.sectionSeparator('Generating RTL');
     final fileIoFutures = <Future<void>>[];
-    for (final synthResult in synthResults) {
-      final fileName = '${synthResult.module.definitionName}.sv';
+    final synthFiles =
+        synthResults.expand((synthResult) => synthResult.toSynthFileContents());
+    for (final synthFile in synthFiles) {
+      final fileName = '${synthFile.name}.sv';
       final filePath = '$outputGenerationPath/$fileName';
       filelistContents.writeln('./rtl/$fileName');
 
-      fileIoFutures.add(File(filePath)
-          .writeAsString(synthResult.toSynthFileContents().join('\n')));
+      fileIoFutures.add(File(filePath).writeAsString(synthFile.contents));
 
       logger.finer('Generated file ${Directory(filePath).absolute.path}');
     }
