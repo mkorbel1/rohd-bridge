@@ -65,8 +65,8 @@
     
 <section class="desc markdown">
   <p>Ties this port to a constant <code>value</code>.</p>
-<p>The <code>value</code> can be any type that can be used to construct a <a href="https://pub.dev/documentation/rohd/0.6.9/rohd/Const-class.html">Const</a>, such
-as an integer, boolean, or <a href="https://pub.dev/documentation/rohd/0.6.9/rohd/LogicValue-class.html">LogicValue</a>. If no value is provided, the port
+<p>The <code>value</code> can be any type that can be used to construct a <a href="https://pub.dev/documentation/rohd/0.6.10/rohd/Const-class.html">Const</a>, such
+as an integer, boolean, or <a href="https://pub.dev/documentation/rohd/0.6.10/rohd/LogicValue-class.html">LogicValue</a>. If no value is provided, the port
 will be tied to 0.</p>
 </section>
 
@@ -75,6 +75,8 @@ will be tied to 0.</p>
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">void tieOff({dynamic value = 0, bool fill = false}) {
+  _connectOverlappingInterfacePortMaps();
+
   getsLogic(module.tieOffConst(value, width: width, fill: fill));
 }</code></pre>
 </section>
